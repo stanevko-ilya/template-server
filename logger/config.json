@@ -1,0 +1,4 @@
+{
+    "save_logs": 90,
+    "format": "%level%%time%%message%"
+}

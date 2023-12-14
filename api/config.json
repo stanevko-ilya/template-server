@@ -1,0 +1,7 @@
+{
+    "mode": "https",
+    "port": 443,
+    "sub_url": "api",
+    "logging": true,
+    "headers": []
+}

@@ -1,0 +1,6 @@
+/node_modules
+/logger/logs/*.log
+/logger/logs/*.conf
+/api/SSL-certification/certificate.crt
+/api/SSL-certification/domain.cabundle
+/api/SSL-certification/key.key

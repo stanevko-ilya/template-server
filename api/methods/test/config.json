@@ -1,0 +1,11 @@
+{
+    "use": true,
+    "method": "get",
+    "params": [
+        {
+            "name": "data",
+            "required": true,
+            "type": "boolean"
+        }
+    ]
+}
