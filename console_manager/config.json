@@ -1,6 +1,0 @@
-{
-    "hide_keys": [ "status_system" ],
-    "space_size": 3,
-    "format": "%level%%message%",
-    "root": "ROOT"
-}

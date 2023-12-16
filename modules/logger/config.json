@@ -1,0 +1,9 @@
+{
+    "UTC": false,
+    "directory": "./logs",
+    "format": {
+        "file_name": "%DD%.%MM%.%YYYY%",
+        "log": "[%level%][%HH%:%MM%:%SS%]%text%"
+    },
+    "save_logs": 180
+}
