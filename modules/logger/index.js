@@ -16,20 +16,23 @@ class Logger extends Module {
     /**
      * 
      * @param {Boolean} create Необходимо ли создать файл, если он отсутствует
+     * @param {String} default_file_name Путь к файлу
      */
-    check_file(create=true) {
+    check_file(create=true, default_file_name=null) {
         const directory = path.join(this.get_dirname(), this.get_config().directory);
 
         const today = new Date();
         if (this.get_config().UTC) today.toUTCZone();
         
-        const file_name = this.get_config().format.file_name
-            .replace('%DD%', today.getDate().toStringWithZeros())
-            .replace('%D%', today.getDate())
-            .replace('%MM%', (today.getDate() + 1).toStringWithZeros())
-            .replace('%M%', (today.getDate() + 1))
-            .replace('%YYYY%', today.getFullYear())
-            .replace('%YY%', (today.getFullYear() % 100).toStringWithZeros())
+        const file_name =  default_file_name ? default_file_name :  
+            this.get_config().format.file_name
+                .replace('%DD%', today.getDate().toStringWithZeros())
+                .replace('%D%', today.getDate())
+                .replace('%MM%', (today.getDate() + 1).toStringWithZeros())
+                .replace('%M%', (today.getDate() + 1))
+                .replace('%YYYY%', today.getFullYear())
+                .replace('%YY%', (today.getFullYear() % 100).toStringWithZeros())
+                + '.' + this.get_config().format.file_extension
         ;
 
         const files_in_directory = fs.readdirSync(directory);
@@ -56,7 +59,7 @@ class Logger extends Module {
     log(level, message) {
         if (!this.#logging) return false;
 
-        const checked = this.check_file(true);
+        const checked = this.check_file(true, null);
         if (!checked.exists) return false;
 
         if (typeof(message) === 'string') message = [ message ];
@@ -85,12 +88,16 @@ class Logger extends Module {
 
     /**
      * 
-     * @param {String} date Дата логов
-     * @param {String} time_start Время начала выборки
-     * @param {String} time_end Время конца выборки
+     * @param {String} file_name Имя фала
      */
-    get(date, time_start=null, time_end=null) {
+    get(file_name) {
+        const extension = this.get_config().format.file_extension;
+        const splited = file_name.split('.');
+        if (splited[splited.length - 1] !== extension) file_name += `.${extension}`;
+
+        const checked = this.check_file(false, file_name);
         
+        return checked.exists ? fs.readFileSync(checked.path_to_file).toString() : false;
     }
 }
 

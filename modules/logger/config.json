@@ -3,6 +3,7 @@
     "directory": "./logs",
     "format": {
         "file_name": "%DD%.%MM%.%YYYY%",
+        "file_extension": "log",
         "log": "[%level%][%HH%:%MM%:%SS%]%text%"
     },
     "save_logs": 180
