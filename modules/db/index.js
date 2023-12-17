@@ -17,7 +17,12 @@ class DB extends Module {
         }
         // TODO: логирование, БД включена
         
-        await this.init_models();
+        try { await this.init_models() }
+        catch (e) {
+            // TODO: логирование, ошибка при инициализации моделей
+            throw new Error('Ошибка при подключении к базе данных')
+        }
+        // TODO: логирование, модели инициализированны
     }
     
     async stop_function() {
