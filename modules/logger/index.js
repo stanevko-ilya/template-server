@@ -17,6 +17,7 @@ class Logger extends Module {
      * 
      * @param {Boolean} create Необходимо ли создать файл, если он отсутствует
      * @param {String} default_file_name Путь к файлу
+     * @description Проверяет наличие файла для записи
      */
     check_file(create=true, default_file_name=null) {
         const directory = path.join(this.get_dirname(), this.get_config().directory);
@@ -55,6 +56,7 @@ class Logger extends Module {
      * 
      * @param {'info'|'warn'|'error'|String} level Любой уровень сообщения
      * @param {String|Array<String>} message Сообщение или список сообщений
+     * @description Добавляет запись в файл
      */
     log(level, message) {
         if (!this.#logging) return false;
@@ -89,6 +91,8 @@ class Logger extends Module {
     /**
      * 
      * @param {String} file_name Имя фала
+     * @description Возвращает записи из выбранного файла
+     * @returns {false|String}
      */
     get(file_name) {
         const extension = this.get_config().format.file_extension;
