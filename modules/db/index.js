@@ -12,15 +12,15 @@ class DB extends Module {
 
         try { await this.mongoose.connect(this.get_config().url) }
         catch (e) {
-            // TODO: логирование, ошибка при подключениие
-            throw new Error('Ошибка при подключении к базе данных')
+            // TODO: логирование, ошибка при подключениие к базе данных
+            throw new Error('Ошибка при подключении к базе данных');
         }
         // TODO: логирование, БД включена
         
         try { await this.init_models() }
         catch (e) {
             // TODO: логирование, ошибка при инициализации моделей
-            throw new Error('Ошибка при подключении к базе данных')
+            throw new Error('Ошибка при инициализации моделей');
         }
         // TODO: логирование, модели инициализированны
     }
