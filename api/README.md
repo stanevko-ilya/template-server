@@ -17,7 +17,7 @@
 
 ## Создание методов
 Для добавления метода необходимо создать каталог с название метода внутри каталог `methods`, внутри каталога необходимо создать файл `index.js` и описать обработчик:
-https://github.com/stanevko-ilya/template-server/blob/c18dcfe75d5b756a17d74a6ca481308aadcb1f5f/api/methods/test/index.js#L1-L6
+https://github.com/stanevko-ilya/template-server/blob/master/api/methods/test/index.js#L1-L6
 
 В примере выше URL адрес для метода по умолчанию будет: `https://domain.ru/api/test`, если необходимо, чтобы URL был `https://domain.ru/api/template/test`, то в каталоге `methods` необходимо создать каталог `template`, и в нём создать каталог `test`, в котором будет описан обработчки
 
