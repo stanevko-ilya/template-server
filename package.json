@@ -9,6 +9,7 @@
     "author": "Stanevko Ilya",
     "license": "ISC",
     "dependencies": {
-        "mongoose": "^8.0.3"
+        "mongoose": "^8.0.3",
+        "ora": "5.0.0"
     }
 }
