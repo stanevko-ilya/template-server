@@ -10,7 +10,7 @@ class Logger extends Module {
 
     constructor() {
         super(__dirname);
-        // this.check_file();
+        this.check_file();
     }
 
     /**
@@ -29,26 +29,26 @@ class Logger extends Module {
             this.get_config().format.file_name
                 .replace('%DD%', today.getDate().toStringWithZeros())
                 .replace('%D%', today.getDate())
-                .replace('%MM%', (today.getDate() + 1).toStringWithZeros())
-                .replace('%M%', (today.getDate() + 1))
+                .replace('%MM%', (today.getMonth() + 1).toStringWithZeros())
+                .replace('%M%', (today.getMonth() + 1))
                 .replace('%YYYY%', today.getFullYear())
                 .replace('%YY%', (today.getFullYear() % 100).toStringWithZeros())
                 + '.' + this.get_config().format.file_extension
         ;
 
+        const path_to_file = path.join(directory, file_name);
         const files_in_directory = fs.readdirSync(directory);
         const exists_file = Boolean(files_in_directory.find(file => file === file_name));
 
         let created = false;
         if (!exists_file && create) {
             created = true;
-            try { fs.writeFileSync(path.join(directory, file_name), '', { mode: 'w' }) }
+            try { fs.writeFileSync(path_to_file, '[INFO]Файл логирования инициализирован\n', { flag: 'w+' }) }
             catch (e) { created = false }
         }
-        
-        const result = { exists: created || exists_file, created };
-        if (result.exists) result.path_to_file = path.join(directory, file_name);
 
+        
+        const result = { exists: created || exists_file, created, path_to_file };
         return result;
     }
 
@@ -65,7 +65,7 @@ class Logger extends Module {
         if (!checked.exists) return false;
 
         if (typeof(message) === 'string') message = [ message ];
-        message.push('\n');
+        message[message.length-1] += '\n';
 
         const now = new Date();
         if (this.get_config().UTC) now.toUTCZone();

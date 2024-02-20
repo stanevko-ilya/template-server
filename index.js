@@ -57,4 +57,9 @@ async function launch(index) {
     const next_index = index + 1;
     if (next_index < launch_queue.length) await launch(next_index);
 }
-launch(0);
+
+async function run() {
+    await delay(1000);
+    await launch(0);
+}
+run();

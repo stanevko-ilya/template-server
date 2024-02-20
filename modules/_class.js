@@ -15,7 +15,7 @@ class Module {
         let done = true;
         let config;
 
-        try { json = require(path.join(this.#__dirname, config_path)) }
+        try { config = require(path.join(this.#__dirname, config_path)) }
         catch (e) { done = false }
 
         if (done) this.#config = config;
@@ -28,7 +28,7 @@ class Module {
      * @param {String} __dirname Путь к папке, где описан класс модуля. Передавайте __dirname
      * @param {String|null} config_path Путь к конфиг файлу от класса модуля
      */
-    constructor(__dirname, config_path='config.json') {
+    constructor(__dirname, config_path='./config.json') {
         this.#__dirname = __dirname;
         if (config_path) this.load_config(config_path);
     }
@@ -44,14 +44,10 @@ class Module {
     async start_function() {}
     /** Функция для запуска */
     async start() {
-        this.#status = 'load';
-        let done = true;
-
-        try { await this.start_function() }
-        catch (e) { done = false }
+        await this.start_function()
         
-        this.#status = done ? 'on' : 'off';
-        return done;
+        this.#status = 'on';
+        return true;
     }
     
     /** Функция для непосредственной остановки */
@@ -59,12 +55,9 @@ class Module {
     /** Функция для оставноки */
     async stop() {
         this.#status = 'off';
-        let done = true;
 
-        try { await this.stop_function() }
-        catch (e) { done = false }
-
-        return done;
+        await this.stop_function()
+        return true;
     }
 }
 
