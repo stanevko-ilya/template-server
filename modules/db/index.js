@@ -22,8 +22,8 @@ class DB extends Module {
         }
         modules.logger.log('info', 'База данных подключена');
         
-        await this.init_models()
-        try {  }
+        
+        try { await this.init_models() }
         catch (e) {
             modules.logger.log('error', 'Ошибка при инициализации моделей');
             throw new Error('Ошибка при инициализации моделей');

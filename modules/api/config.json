@@ -1,0 +1,12 @@
+{
+    "https": false,
+    "port": 443,
+    "timeout": 2104,
+    "sub_url": "api",
+
+    "paths": {
+        "methods": "./methods",
+        "static": "./public",
+        "ssl": "../SSL-certification"
+    }
+}
