@@ -19,7 +19,8 @@ async function launch(index) {
     indicator.start();
 
     let error = false;
-    try { await modules[module].start() }
+    await modules[module].start()
+    try {  }
     catch (e) { error = e.message }
 
     if (error) {

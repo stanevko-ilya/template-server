@@ -7,6 +7,6 @@
     "paths": {
         "methods": "./methods",
         "static": "./public",
-        "ssl": "../SSL-certification"
+        "ssl": "../../SSL-certification"
     }
 }

@@ -1,6 +1,18 @@
 const Module = require('../../_class');
+const API = require('../index');
 
 class Method extends Module {
+    /** @type {String} */
+    #url;
+    get_url() { return this.#url }
+
+    /** @type {import('express').Express} */
+    #express;
+    get_express() { return this.#express }
+
+    /** @type {import('../index').send} */
+    send_response() {};
+
     #errors = [
         { code: -1, message: 'Ошибка во время выполнения запроса' }
     ];
@@ -18,18 +30,18 @@ class Method extends Module {
      */
     async get_response(req, res) { return true }
 
-    constructor(__dirname, express, send_response) {
+    constructor(__dirname, url, express) {
         super(__dirname);
-        this.#create_node(express, send_response);
+
+        this.#url = url;
+        this.#express = express;
+        this.send_response = API.send;
+
+        this.#create_node();
     }
 
-    /**
-     * 
-     * @param {import('express').Express} express 
-     * @param {import('../index').send} send_response 
-     */
-    #create_node(express, send_response) {
-        express[this.get_config().method](this.get_config().url, async (req, res) => {
+    #create_node() {
+        this.#express[this.get_config().method](this.#url, async (req, res) => {
             // TODO: лог о выполнение запроса
 
             let response;
@@ -38,11 +50,11 @@ class Method extends Module {
             try { response = await this.get_response(req, res) }
             catch (e) {
                 done = false;
-                send_response(res, this.get_error(-1), 500);
+                this.send_response(res, this.get_error(-1), 500);
             }
 
             if (!done) return;
-            send_response(res, response);
+            this.send_response(res, response);
         });
     }
 }
