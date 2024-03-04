@@ -4,7 +4,7 @@ require('./customize');
 const delay = require('./functions/async_delay');
 const modules = require('./modules');
 
-const priority_launch_queue = [ 'logger', 'db' ]; // Приорететная очередь запуска
+const priority_launch_queue = [ 'logger' ]; // Приорететная очередь запуска
 const launch_queue = Object.keys(modules).sort((module1, module2) => {
     const index_module1 = priority_launch_queue.indexOf(module1);
     const index_module2 = priority_launch_queue.indexOf(module2);
@@ -19,14 +19,13 @@ async function launch(index) {
     indicator.start();
 
     let error = false;
-    await modules[module].start()
-    try {  }
+    try { await modules[module].start() }
     catch (e) { error = e.message }
 
     if (error) {
         indicator.fail('Ошибка во время запуска модуля ' + module);
         console.log('> Ошибка: ' + error);
-        return;
+        if (priority_launch_queue.indexOf(module) !== -1) return;
     }
 
     async function check_status(number) {
