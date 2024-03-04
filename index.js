@@ -4,7 +4,12 @@ require('./customize');
 const delay = require('./functions/async_delay');
 const modules = require('./modules');
 
-const priority_launch_queue = [ 'logger' ]; // Приорететная очередь запуска
+/**
+ * @description Приорететная очередь запуска
+ * @default ['logger','db']
+ */
+const priority_launch_queue = [ 'logger' ];
+priority_launch_queue
 const launch_queue = Object.keys(modules).sort((module1, module2) => {
     const index_module1 = priority_launch_queue.indexOf(module1);
     const index_module2 = priority_launch_queue.indexOf(module2);

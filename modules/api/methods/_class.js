@@ -1,6 +1,8 @@
 const Module = require('../../_class');
 const API = require('../index');
 
+const modules = require('../../../modules');
+
 class Method extends Module {
     /** @type {String} */
     #url;
@@ -41,8 +43,8 @@ class Method extends Module {
     }
 
     #create_node() {
-        this.#express[this.get_config().method](this.#url, async (req, res) => {
-            // TODO: лог о выполнение запроса
+        this.#express[this.get_config().method](this.get_url(), async (req, res) => {
+            // modules.logger.log('info', `Выполнение запроса ${this.get_url()}`);
 
             let response;
             let done = true;

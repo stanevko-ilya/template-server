@@ -7,6 +7,8 @@ const express = require('express');
 const Module = require('../_class');
 const directory_search = require('../../functions/directory_search');
 
+const modules = require('../../modules');
+
 class API extends Module {
     /**
      * 
@@ -29,7 +31,7 @@ class API extends Module {
                 ca: fs.readFileSync(path.join(SSL_PATH, 'domain.cabundle'))
             }
         } catch (e) {
-            // TODO: лог об ошибке загрузки
+            modules.logger.log('error', e.message);
         }
     }
     
@@ -66,18 +68,19 @@ class API extends Module {
         
         this.#server = (mode_https ? https : http).createServer(options ? options : {}, this.#express);
         
-        await new Promise((res) =>
-            this.#server.listen(this.get_config().port, () => {
-                // TODO: лог о запуске сервера
+        await new Promise((res) => {
+            const port = this.get_config().port;
+            this.#server.listen(port, () => {
+                modules.logger.log('info', `${mode_https ? 'HTTPS' : 'HHTP'} сервер запрущен, порт: ${port}`);
                 res(true);
             })
-        );
+        });
     }
     
     async stop_function() {
         await new Promise((res) =>
             this.#server.close(() => {
-                // TODO: лог об остановке сервера
+                modules.logger.log('info', `${this.get_config().https ? 'HTTPS' : 'HHTP'} сервер остановлен`);
                 res(true);
             })
         );

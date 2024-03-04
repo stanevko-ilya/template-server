@@ -1,6 +1,16 @@
 const path = require('path');
 const directory_search = require('./functions/directory_search');
-module.exports = {};
+
+module.exports = {
+    /** @type {import('./modules/logger')} */
+    logger: null,
+
+    /** @type {import('./modules/db')} */
+    db: null,
+
+    /** @type {import('./modules/api')} */
+    api: null
+};
 
 directory_search(
     path.join(__dirname, './modules'),
