@@ -46,7 +46,7 @@ class API extends Module {
         directory_search(
             path.join(this.get_dirname(), this.get_config().paths.methods),
             file_path => {
-                const splited = file_path.split('/');
+                const splited = file_path.replace(/\\/g, '/').split('/');
                 /** @type {import('./methods/_class')} */
                 const method = new (require(file_path))('/' + this.get_config().sub_url + '/' + splited.slice(splited.findIndex(e => e === this.get_config().paths.methods.split('/').reverse()[0]) + 1, splited.length - 1).join('/'), this.#express);
             },
