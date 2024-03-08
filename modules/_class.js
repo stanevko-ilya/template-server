@@ -10,7 +10,12 @@ class Module {
     /** Возвращает конфиг модуля */
     get_config() { return this.#config }
     
-    load_config(config_path) {
+    /**
+     * 
+     * @param {String} config_path Путь к файлу конфига
+     * @param {Function|null} format Функция дял автоматического редактирование конфига при загрузке (добавление/удаление полей)
+     */
+    load_config(config_path, format=null) {
         if (typeof(config_path) !== 'string') throw new Error('Неверный формат данных');
         let done = true;
         let config;
@@ -18,7 +23,10 @@ class Module {
         try { config = require(path.join(this.#__dirname, config_path)) }
         catch (e) { done = false }
 
-        if (done) this.#config = config;
+        if (done) {
+            if (format instanceof Function) config = forma(config);
+            this.#config = config;
+        }
 
         return done;
     }

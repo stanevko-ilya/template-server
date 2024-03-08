@@ -31,7 +31,7 @@ class API extends Module {
                 ca: fs.readFileSync(path.join(SSL_PATH, 'domain.cabundle'))
             }
         } catch (e) {
-            modules.logger.log('error', e.message);
+            modules.logger.log('warn', e.message);
         }
     }
     
@@ -40,6 +40,8 @@ class API extends Module {
     #init_express() {
         this.#express = express();
         this.#express.use('/', express.static(path.join(this.get_dirname(), this.get_config().paths.static)));
+
+        // TODO: добавление обработчиков событий
     }
     
     #init_methods() {
@@ -71,7 +73,7 @@ class API extends Module {
         await new Promise((res) => {
             const port = this.get_config().port;
             this.#server.listen(port, () => {
-                modules.logger.log('info', `${mode_https ? 'HTTPS' : 'HHTP'} сервер запрущен, порт: ${port}`);
+                modules.logger.log('info', `${mode_https ? 'HTTPS' : 'HTTP'} сервер запрущен, порт: ${port}`);
                 res(true);
             })
         });
@@ -80,7 +82,7 @@ class API extends Module {
     async stop_function() {
         await new Promise((res) =>
             this.#server.close(() => {
-                modules.logger.log('info', `${this.get_config().https ? 'HTTPS' : 'HHTP'} сервер остановлен`);
+                modules.logger.log('info', `${this.get_config().https ? 'HTTPS' : 'HTTP'} сервер остановлен`);
                 res(true);
             })
         );
