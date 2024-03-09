@@ -1,48 +1,4 @@
 {
     "use": true,
-    "method": "get",
-    "params": [
-        {
-            "name": "fio",
-            "required": true,
-            "valid_values": ["123", "SII", "321"]
-        },
-        {
-            "name": "test1",
-            "required": true,
-            "type": "number",
-            "orientation": "positive"
-        },
-        {
-            "name": "test2",
-            "type": "number",
-            "orientation": "negative"
-        },
-        {
-            "name": "test7",
-            "required": true,
-            "type": "number"
-        },
-        {
-            "name": "test3",
-            "required": true,
-            "interval": [10, 12],
-            "type": "number"
-        },
-        {
-            "name": "test4",
-            "required": true,
-            "type": "boolean"
-        },
-        {
-            "name": "test5",
-            "required": true,
-            "type": "object"
-        },
-        {
-            "name": "test6",
-            "required": true,
-            "type": "objectId"
-        }
-    ]
+    "method": "get"
 }

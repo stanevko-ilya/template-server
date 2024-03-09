@@ -12,6 +12,7 @@ class Method extends Module {
                 if ('params' in config && config.params instanceof Array && config.params.length > 0) {
                     if (!(new Set(config.params.map(param => param.name)).size === config.params.length)) throw new Error('Имя параметров должны быть уникальные');
                     config.required_params = config.params.filter(param => param.required).map(param => param.name);
+                    config.have_params = true;
                 }
                 return config;
             }
@@ -34,7 +35,7 @@ class Method extends Module {
         { code: -2, message: 'Ошибка во время проверки параметров запроса' },
         { code: -3, message: 'Метод отключен' },
     ];
-    get_error(code) { this.#errors.find(error => error.code === code) }
+    get_error(code) { return this.#errors.find(error => error.code === code) }
     reg_error(code, message) {
         if (this.get_error()) throw new Error('Код ошибки уже занят в данном методе');
         this.#errors.push({ code, message });
@@ -54,7 +55,7 @@ class Method extends Module {
         // Проверка наличия обязательных параметров
         for (let i = 0; i < config.required_params.length; i++) {
             const key = config.required_params[i];
-            if (!(key in req.container_data)) return false;
+            if (!(key in req.container_data)) return key;
         }
 
         // Обработка переданных параметров
@@ -75,7 +76,7 @@ class Method extends Module {
                 continue;
             }
 
-            // TODO: Обработка и проверка значения
+            // Обработка и проверка значения
             let value = req.container_data[key];
             try {
                 switch (param_config.type) {
@@ -88,7 +89,7 @@ class Method extends Module {
                             (param_config.orientation === 'positive' && value < 0 || param_config.orientation === 'negative' && value > 0)
                         ) value *= -1;
     
-                        if ('interval' in param_config && (param_config.interval[0] > value || param_config.interval[1] < value)) return false;
+                        if ('interval' in param_config && (param_config.interval[0] >= value || param_config.interval[1] <= value)) return key;
                     break;
     
                     case 'boolean':
@@ -103,7 +104,7 @@ class Method extends Module {
                         value = new mongoose.Types.ObjectId(value);
                     break;
                 }
-            } catch (e) { return false }
+            } catch (e) { return key }
         }
 
         return true;
@@ -138,8 +139,7 @@ class Method extends Module {
             }
 
             if (config.have_params) done = this.check_params(req);
-
-            if (!done) return this.send_response(res, this.get_error(-2), 400);
+            if (done !== true) return this.send_response(res, { ...this.get_error(-2), param_name: done }, 400);
             
             try { response = await this.get_response(req, res) }
             catch (e) { done = false }

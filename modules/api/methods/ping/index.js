@@ -1,7 +1,7 @@
 const Method = require('../_class');
 
 class Ping extends Method {
-    get_response(req) { return ({ ok: true, ...req.container_data }) }
+    get_response() { return ({ ok: true }) }
 
     constructor(url, express) { super(__dirname, url, express) }
 }
