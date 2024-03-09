@@ -8,8 +8,7 @@ const modules = require('./modules');
  * @description Приорететная очередь запуска
  * @default ['logger','db']
  */
-const priority_launch_queue = [ 'logger' ];
-priority_launch_queue
+const priority_launch_queue = [ 'logger', 'db' ];
 const launch_queue = Object.keys(modules).sort((module1, module2) => {
     const index_module1 = priority_launch_queue.indexOf(module1);
     const index_module2 = priority_launch_queue.indexOf(module2);
