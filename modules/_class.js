@@ -24,7 +24,7 @@ class Module {
         catch (e) { done = false }
 
         if (done) {
-            if (format instanceof Function) config = forma(config);
+            if (format instanceof Function) config = format(config);
             this.#config = config;
         }
 

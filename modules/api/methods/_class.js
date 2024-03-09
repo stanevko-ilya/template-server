@@ -2,6 +2,7 @@ const Module = require('../../_class');
 const API = require('../index');
 
 const modules = require('../../../modules');
+const { default: mongoose } = require('mongoose');
 
 class Method extends Module {
     load_config(config_path) {
@@ -58,6 +59,16 @@ class Method extends Module {
 
         // Обработка переданных параметров
         for (const key in req.container_data) {
+            /**
+             * @type {{
+             *  name: String,
+             *  required: Boolean,
+             *  type: 'string'|'number'|'object'|'boolean'|'objectId',
+             *  orientation: 'positive'|'negative',
+             *  interval: [Number, Number],
+             *  valid_values: Array<*>
+             * }|undefined}
+             */
             const param_config = config.params.find(param => param.name === key);
             if (!param_config) {
                 delete req.container_data[key];
@@ -65,7 +76,37 @@ class Method extends Module {
             }
 
             // TODO: Обработка и проверка значения
+            let value = req.container_data[key];
+            try {
+                switch (param_config.type) {
+                    case 'number':
+                        value = +value;
+                        
+                        if (
+                            'orientation' in param_config
+                            &&
+                            (param_config.orientation === 'positive' && value < 0 || param_config.orientation === 'negative' && value > 0)
+                        ) value *= -1;
+    
+                        if ('interval' in param_config && (param_config.interval[0] > value || param_config.interval[1] < value)) return false;
+                    break;
+    
+                    case 'boolean':
+                        value = Boolean(Number.parseInt(value));
+                    break;
+    
+                    case 'object':
+                        value = JSON.parse(value);
+                    break;
+
+                    case 'objectId':
+                        value = new mongoose.Types.ObjectId(value);
+                    break;
+                }
+            } catch (e) { return false }
         }
+
+        return true;
     }
 
     constructor(__dirname, url, express) {
