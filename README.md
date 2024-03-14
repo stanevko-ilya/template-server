@@ -32,7 +32,7 @@ $ npm i -d
 - `Array.clone` - создаст независимую копию массива
 - `Object.clone` - создаст независимую копию объекта
 - `Date.toShortDate` - вернет дату, месяц, год в строке
-- `Date.toUTCZone` - приводит текущую дату и время к времени в UTC+0 зоне
+- `Date.toUTCZone` - приводит текущую дату и время в UTC+0 зону
 ```javascript
 21.toStringWithZeros() // '21'
 4.toStringWithZeros() // '04'
