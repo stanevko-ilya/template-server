@@ -49,17 +49,17 @@ class Method extends Module {
      */
     async get_response(req, res) { return true }
 
-    check_params(req) {
+    check_params(data) {
         const config = this.get_config();
         
         // Проверка наличия обязательных параметров
         for (let i = 0; i < config.required_params.length; i++) {
             const key = config.required_params[i];
-            if (!(key in req.container_data)) return key;
+            if (!(key in data)) return key;
         }
 
         // Обработка переданных параметров
-        for (const key in req.container_data) {
+        for (const key in data) {
             /**
              * @type {{
              *  name: String,
@@ -72,12 +72,12 @@ class Method extends Module {
              */
             const param_config = config.params.find(param => param.name === key);
             if (!param_config) {
-                delete req.container_data[key];
+                delete data[key];
                 continue;
             }
 
             // Обработка и проверка значения
-            let value = req.container_data[key];
+            let value = data[key];
             try {
                 switch (param_config.type) {
                     case 'number':
@@ -117,10 +117,10 @@ class Method extends Module {
         this.#express = express;
         this.send_response = API.send;
 
-        this.#create_node();
+        this.create_node();
     }
 
-    #create_node() {
+    create_node() {
         if (!this.get_config()) return false;
 
         this.#express[this.get_config().method](this.get_url(), async (req, res) => {
@@ -138,7 +138,7 @@ class Method extends Module {
                 // Проверка авторизации пользователя
             }
 
-            if (config.have_params) done = this.check_params(req);
+            if (config.have_params) done = this.check_params(req.container_data);
             if (done !== true) return this.send_response(res, { ...this.get_error(-2), param_name: done }, 400);
             
             try { response = await this.get_response(req, res) }
