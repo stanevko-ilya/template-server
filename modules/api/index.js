@@ -40,8 +40,23 @@ class API extends Module {
     #init_express() {
         this.#express = express();
         this.#express.use('/', express.static(path.join(this.get_dirname(), this.get_config().paths.static)));
+        
+        const headers = this.get_config().headers;
+        if (headers instanceof Array && headers.length > 0)
+            this.#express.use((req, res, next) => {
+                for (let i = 0; i < headers.length; i++) {
+                    const header = headers[i];
+                    if ('name' in header && 'value' in header) res.setHeader(header.name, header.value);
+                }
+                next();
+            });
 
-        // TODO: добавление обработчиков событий
+        this.#express.use((req, res, next) => {
+            if (req.method === 'OPTIONS') return API.send(res, 'OK');
+            next();
+        });
+
+        //Дополнительные обработчики
     }
     
     #init_methods() {
