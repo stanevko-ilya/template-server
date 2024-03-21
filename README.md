@@ -17,8 +17,9 @@ $ npm i -d
 
 ## Заготовленные модули
 1. [Система логирования](https://github.com/stanevko-ilya/template-server/tree/v2/modules/logger) - позволяет вести логирование
-2. [Система API](https://github.com/stanevko-ilya/template-server/tree/v2/modules/api) - используется для создание api
-3. [Система БД](https://github.com/stanevko-ilya/template-server/tree/v2/modules/db) - используется для запросов к mongoDB
+2. [Система БД](https://github.com/stanevko-ilya/template-server/tree/v2/modules/db) - используется для запросов к mongoDB
+3. [Система API](https://github.com/stanevko-ilya/template-server/tree/v2/modules/api) - используется для создание api
+4. [Система Sockets](https://github.com/stanevko-ilya/template-server/tree/v2/modules/sockets) - используется для создание socket-сервера
 
 ## Запуск
 Старт через обычную точку входа осуществляется при помощи `node index.js`. В заготовленной точке входа Вы можете указать приоритетную очередь зауска, для этого необходимо в массиве `priority_launch_queue` указать названия модулей в необходимом порядке.
