@@ -80,7 +80,7 @@ class API extends Module {
 
         const mode_https = this.get_config().https;
 
-        if (!this.get_options()) this.load_options();
+        if (!this.get_options() && mode_https) this.load_options();
         const options = this.get_options();
         
         this.#server = (mode_https ? https : http).createServer(options ? options : {}, this.#express);
@@ -103,7 +103,8 @@ class API extends Module {
         );
     }
 
-    constructor() { super(__dirname) }
+    // Передача _dirname, так как класс API используется для класса Socket
+    constructor(_dirname=__dirname) { super(_dirname) }
 }
 
 module.exports = API;

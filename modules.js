@@ -9,7 +9,10 @@ module.exports = {
     db: null,
 
     /** @type {import('./modules/api')} */
-    api: null
+    api: null,
+
+    /** @type {import('./modules/sockets')} */
+    sockets: null
 };
 
 directory_search(
