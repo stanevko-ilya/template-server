@@ -3,6 +3,7 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const express = require('express');
+const body_parser = require('body-parser');
 
 const Module = require('../_class');
 const directory_search = require('../../functions/directory_search');
@@ -55,6 +56,9 @@ class API extends Module {
             if (req.method === 'OPTIONS') return API.send(res, 'OK');
             next();
         });
+
+        this.#express.use(body_parser.json());
+        this.#express.use(body_parser.urlencoded({ extended: false }));
 
         //Дополнительные обработчики
     }
