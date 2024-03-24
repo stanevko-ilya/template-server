@@ -155,6 +155,8 @@ class Method extends Module {
             catch (e) { done = false }
 
             if (!done) return this.send_response(res, this.get_error(-1), 500);
+            
+            if (response instanceof Object && 'error_code' in response) return this.send_response(res, this.get_error(response.error_code), 'status' in response ? response.status : 200);
             this.send_response(res, response);
         });
     }
