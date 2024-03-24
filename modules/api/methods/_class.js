@@ -117,6 +117,16 @@ class Method extends Module {
         this.#express = express;
         this.send_response = API.send;
 
+        const method_config = this.get_config();
+        if (method_config) {
+            if ('errors' in method_config && method_config.errors instanceof Array) {
+                for (let i = 0; i < method_config.errors.length; i++) {
+                    const error = method_config.errors[i];
+                    if ('code' in error && 'message' in error) this.reg_error(error.code, error.message);
+                }
+            }
+        }
+
         this.create_node();
     }
 
