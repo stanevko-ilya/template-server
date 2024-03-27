@@ -105,6 +105,9 @@ class Method extends Module {
                     break;
                 }
             } catch (e) { return key }
+
+            
+            if ('valid_values' in param_config && param_config.valid_values.indexOf(value) === -1) return key; 
         }
 
         return true;
