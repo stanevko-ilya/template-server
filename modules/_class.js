@@ -3,18 +3,18 @@ const path = require('path');
 class Module {
     #__dirname;
     /** Возвращает расположение описание модуля  */
-    get_dirname() { return this.#__dirname }
+    getDirname() { return this.#__dirname }
 
     #config = null;
     /** Возвращает конфиг модуля */
-    get_config() { return this.#config }
+    getConfig() { return this.#config }
     
     /**
      * 
      * @param {String} config_path Путь к файлу конфига
      * @param {Function|null} format Функция дял автоматического редактирование конфига при загрузке (добавление/удаление полей)
      */
-    load_config(config_path, format=null) {
+    loadConfig(config_path, format=null) {
         if (typeof(config_path) !== 'string') throw new Error('Неверный формат данных');
         let done = true;
         let config;
@@ -37,7 +37,7 @@ class Module {
      */
     constructor(__dirname, config_path='./config.json') {
         this.#__dirname = __dirname;
-        if (config_path) this.load_config(config_path);
+        if (config_path) this.loadConfig(config_path);
     }
 
     #status = 'off';
@@ -45,25 +45,25 @@ class Module {
      * @description Получения состояния модуля
      * @returns {'off'|'load'|'on'}
     */
-    get_status() { return this.#status }
+    getStatus() { return this.#status }
 
     /** Функция для непосредственного запуска */
-    async start_function() {}
+    async startFunction() {}
     /** Функция для запуска */
     async start() {
-        await this.start_function()
+        await this.startFunction()
         
         this.#status = 'on';
         return true;
     }
     
     /** Функция для непосредственной остановки */
-    async stop_function() {}
+    async stopFunction() {}
     /** Функция для оставноки */
     async stop() {
         this.#status = 'off';
 
-        await this.stop_function()
+        await this.stopFunction()
         return true;
     }
 }

@@ -6,7 +6,7 @@ const express = require('express');
 const body_parser = require('body-parser');
 
 const Module = require('../_class');
-const directory_search = require('../../functions/directory_search');
+const directorySearch = require('../../functions/directorySearch');
 
 const modules = require('../../modules');
 
@@ -22,10 +22,10 @@ class API extends Module {
 
     /** @type {{ key: String, cert: String, ca: String }} */
     #options;
-    get_options() { return this.#options }
-    load_options() {
+    getOptions() { return this.#options }
+    loadOptions() {
         try {
-            const SSL_PATH = path.join(this.get_dirname(), this.get_config().paths.ssl);
+            const SSL_PATH = path.join(this.getDirname(), this.getConfig().paths.ssl);
             this.#options = {
                 key: fs.readFileSync(path.join(SSL_PATH, 'key.key')), 
                 cert: fs.readFileSync(path.join(SSL_PATH, 'certificate.crt')), 
@@ -38,11 +38,11 @@ class API extends Module {
     
     /** @type {express.Express} */
     #express;
-    #init_express() {
+    #initExpress() {
         this.#express = express();
-        this.#express.use('/', express.static(path.join(this.get_dirname(), this.get_config().paths.static)));
+        this.#express.use('/', express.static(path.join(this.getDirname(), this.getConfig().paths.static)));
         
-        const headers = this.get_config().headers;
+        const headers = this.getConfig().headers;
         if (headers instanceof Array && headers.length > 0)
             this.#express.use((req, res, next) => {
                 for (let i = 0; i < headers.length; i++) {
@@ -63,13 +63,13 @@ class API extends Module {
         //Дополнительные обработчики
     }
     
-    #init_methods() {
-        directory_search(
-            path.join(this.get_dirname(), this.get_config().paths.methods),
+    #initMethod() {
+        directorySearch(
+            path.join(this.getDirname(), this.getConfig().paths.methods),
             file_path => {
                 const splited = file_path.replace(/\\/g, '/').split('/');
                 /** @type {import('./methods/_class')} */
-                const method = new (require(file_path))('/' + this.get_config().sub_url + '/' + splited.slice(splited.findIndex(e => e === this.get_config().paths.methods.split('/').reverse()[0]) + 1, splited.length - 1).join('/'), this.#express);
+                const method = new (require(file_path))('/' + this.getConfig().sub_url + '/' + splited.slice(splited.findIndex(e => e === this.getConfig().paths.methods.split('/').reverse()[0]) + 1, splited.length - 1).join('/'), this.#express);
             },
             'index.js'
         );
@@ -78,19 +78,19 @@ class API extends Module {
     /** @type {http.Server|https.Server} */
     #server;
 
-    async start_function() {
-        this.#init_express();
-        this.#init_methods();
+    async startFunction() {
+        this.#initExpress();
+        this.#initMethod();
 
-        const mode_https = this.get_config().https;
+        const mode_https = this.getConfig().https;
 
-        if (!this.get_options() && mode_https) this.load_options();
-        const options = this.get_options();
+        if (!this.getOptions() && mode_https) this.loadOptions();
+        const options = this.getOptions();
         
         this.#server = (mode_https ? https : http).createServer(options ? options : {}, this.#express);
         
         await new Promise((res) => {
-            const port = this.get_config().port;
+            const port = this.getConfig().port;
             this.#server.listen(port, () => {
                 modules.logger.log('info', `${mode_https ? 'HTTPS' : 'HTTP'} сервер запрущен, порт: ${port}`);
                 res(true);
@@ -98,10 +98,10 @@ class API extends Module {
         });
     }
     
-    async stop_function() {
+    async stopFunction() {
         await new Promise((res) =>
             this.#server.close(() => {
-                modules.logger.log('info', `${this.get_config().https ? 'HTTPS' : 'HTTP'} сервер остановлен`);
+                modules.logger.log('info', `${this.getConfig().https ? 'HTTPS' : 'HTTP'} сервер остановлен`);
                 res(true);
             })
         );

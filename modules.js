@@ -1,5 +1,5 @@
 const path = require('path');
-const directory_search = require('./functions/directory_search');
+const directorySearch = require('./functions/directorySearch');
 
 module.exports = {
     /** @type {import('./modules/logger')} */
@@ -15,7 +15,7 @@ module.exports = {
     sockets: null
 };
 
-directory_search(
+directorySearch(
     path.join(__dirname, './modules'),
     file_path => {
         const module_class = require(file_path);

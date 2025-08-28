@@ -5,8 +5,8 @@ const modules = require('../../../modules');
 const { default: mongoose } = require('mongoose');
 
 class Method extends Module {
-    load_config(config_path) {
-        return super.load_config(
+    loadConfig(config_path) {
+        return super.loadConfig(
             config_path,
             config => {
                 if ('params' in config && config.params instanceof Array && config.params.length > 0) {
@@ -21,23 +21,23 @@ class Method extends Module {
 
     /** @type {String} */
     #url;
-    get_url() { return this.#url }
+    getUrl() { return this.#url }
 
     /** @type {import('express').Express} */
     #express;
-    get_express() { return this.#express }
+    getExpress() { return this.#express }
 
     /** @type {import('../index').send} */
-    send_response() {};
+    sendResponse() {};
 
     #errors = [
         { code: -1, message: 'Ошибка во время выполнения запроса' },
         { code: -2, message: 'Ошибка во время проверки параметров запроса' },
         { code: -3, message: 'Метод отключен' },
     ];
-    get_error(code) { return this.#errors.find(error => error.code === code) }
-    reg_error(code, message) {
-        if (this.get_error()) throw new Error('Код ошибки уже занят в данном методе');
+    getError(code) { return this.#errors.find(error => error.code === code) }
+    regError(code, message) {
+        if (this.getError()) throw new Error('Код ошибки уже занят в данном методе');
         this.#errors.push({ code, message });
     }
 
@@ -47,10 +47,10 @@ class Method extends Module {
      * @param {Object} res Ответ пользователю
      * @returns {*} Ответ вызова метода
      */
-    async get_response(req, res) { return true }
+    async getResponse(req, res) { return true }
 
-    check_params(data) {
-        const config = this.get_config();
+    checkParams(data) {
+        const config = this.getConfig();
         
         // Проверка наличия обязательных параметров
         for (let i = 0; i < config.required_params.length; i++) {
@@ -118,49 +118,49 @@ class Method extends Module {
 
         this.#url = url;
         this.#express = express;
-        this.send_response = API.send;
+        this.sendResponse = API.send;
 
-        const method_config = this.get_config();
+        const method_config = this.getConfig();
         if (method_config) {
             if ('errors' in method_config && method_config.errors instanceof Array) {
                 for (let i = 0; i < method_config.errors.length; i++) {
                     const error = method_config.errors[i];
-                    if ('code' in error && 'message' in error) this.reg_error(error.code, error.message);
+                    if ('code' in error && 'message' in error) this.regError(error.code, error.message);
                 }
             }
         }
 
-        this.create_node();
+        this.createNode();
     }
 
-    create_node() {
-        if (!this.get_config()) return false;
+    createNode() {
+        if (!this.getConfig()) return false;
 
-        this.#express[this.get_config().method](this.get_url(), async (req, res) => {
-            const config = this.get_config();
+        this.#express[this.getConfig().method](this.getUrl(), async (req, res) => {
+            const config = this.getConfig();
 
             req.container_data = req[req.method === 'GET' ? 'query' : 'body'];
             if (!req.container_data) req.container_data = {};
-            // modules.logger.log('info', `Выполнение запроса ${this.get_url()}`);
+            // modules.logger.log('info', `Выполнение запроса ${this.getUrl()}`);
 
             let response;
             let done = config.use;
-            if (!done) return this.send_response(res, this.get_error(-3), 500);
+            if (!done) return this.sendResponse(res, this.getError(-3), 500);
 
             if ('auth' in config) {
                 // Проверка авторизации пользователя
             }
 
-            if (config.have_params) done = this.check_params(req.container_data);
-            if (done !== true) return this.send_response(res, { ...this.get_error(-2), param_name: done }, 400);
+            if (config.have_params) done = this.checkParams(req.container_data);
+            if (done !== true) return this.sendResponse(res, { ...this.getError(-2), param_name: done }, 400);
             
-            try { response = await this.get_response(req, res) }
+            try { response = await this.getResponse(req, res) }
             catch (e) { done = false }
 
-            if (!done) return this.send_response(res, this.get_error(-1), 500);
+            if (!done) return this.sendResponse(res, this.getError(-1), 500);
             
-            if (response instanceof Object && 'error_code' in response) return this.send_response(res, this.get_error(response.error_code), 'status' in response ? response.status : 200);
-            this.send_response(res, response);
+            if (response instanceof Object && 'error_code' in response) return this.sendResponse(res, this.getError(response.error_code), 'status' in response ? response.status : 200);
+            this.sendResponse(res, response);
         });
     }
 }

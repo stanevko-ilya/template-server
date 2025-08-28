@@ -6,7 +6,7 @@ const socket_io = require('socket.io');
 
 const modules = require('../../modules');
 const API = require('../api');
-const directory_search = require('../../functions/directory_search');
+const directorySearch = require('../../functions/directorySearch');
 
 class Sockets extends API {
     /**
@@ -20,10 +20,10 @@ class Sockets extends API {
 
     /** @type {{ key: String, cert: String, ca: String }} */
     #options;
-    get_options() { return this.#options }
-    load_options() {
+    getOptions() { return this.#options }
+    loadOptions() {
         try {
-            const SSL_PATH = path.join(this.get_dirname(), this.get_config().paths.ssl);
+            const SSL_PATH = path.join(this.getDirname(), this.getConfig().paths.ssl);
             this.#options = {
                 key: fs.readFileSync(path.join(SSL_PATH, 'key.key')), 
                 cert: fs.readFileSync(path.join(SSL_PATH, 'certificate.crt')), 
@@ -36,17 +36,17 @@ class Sockets extends API {
 
     /** @type {socket_io.Server} */
     #socket;
-    get_socket() { return this.#socket }
+    getSocket() { return this.#socket }
 
-    #init_socket() { this.#socket = new socket_io.Server(this.#server, {  }) }
+    #initSocket() { this.#socket = new socket_io.Server(this.#server, {  }) }
 
-    init_events(socket, socket_mode) {
-        directory_search(
-            path.join(this.get_dirname(), this.get_config().paths.events, socket_mode),
+    initEvents(socket, socket_mode) {
+        directorySearch(
+            path.join(this.getDirname(), this.getConfig().paths.events, socket_mode),
             file_path => {
                 const splited = file_path.replace(/\\/g, '/').split('/');
                 /** @type {import('./events/_class')} `*/
-                const event = new (require(file_path))(splited.slice(splited.findIndex(e => e === this.get_config().paths.events.split('/').reverse()[0]) + 2, splited.length - 1).join('/'), socket);
+                const event = new (require(file_path))(splited.slice(splited.findIndex(e => e === this.getConfig().paths.events.split('/').reverse()[0]) + 2, splited.length - 1).join('/'), socket);
             },
             'index.js'
         );
@@ -55,18 +55,18 @@ class Sockets extends API {
     /** @type {http.Server|https.Server} */
     #server;
 
-    async start_function() {
-        const mode_https = this.get_config().https;
+    async startFunction() {
+        const mode_https = this.getConfig().https;
 
-        if (!this.get_options() && mode_https) this.load_options();
-        const options = this.get_options();
+        if (!this.getOptions() && mode_https) this.loadOptions();
+        const options = this.getOptions();
          
         this.#server = (mode_https ? https : http).createServer(options ? options : {});
-        this.#init_socket();
-        this.init_events(this.get_socket(), 'io');
+        this.#initSocket();
+        this.initEvents(this.getSocket(), 'io');
 
         await new Promise((res) => {
-            const port = this.get_config().port;
+            const port = this.getConfig().port;
             this.#server.listen(port, () => {
                 modules.logger.log('info', `Socket сервер на ${mode_https ? 'HTTPS' : 'HTTP'} сервере запрущен, порт: ${port}`);
                 res(true);
@@ -74,10 +74,10 @@ class Sockets extends API {
         });
     }
      
-    async stop_function() {
+    async stopFunction() {
         await new Promise((res) =>
             this.#server.close(() => {
-                modules.logger.log('info', `${this.get_config().https ? 'HTTPS' : 'HTTP'} сервер остановлен`);
+                modules.logger.log('info', `${this.getConfig().https ? 'HTTPS' : 'HTTP'} сервер остановлен`);
                 res(true);
             })
         );

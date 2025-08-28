@@ -39,7 +39,7 @@ async function launch(index) {
             return;
         }
 
-        const status = modules[module].get_status();
+        const status = modules[module].getStatus();
         
         switch (status) {
             case 'off':

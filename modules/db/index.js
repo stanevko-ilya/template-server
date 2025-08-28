@@ -11,11 +11,11 @@ class DB extends Module {
     /** @type {Object.<string, Model<any, unknown, unknown, unknown, any, any>} */
     models;
 
-    async start_function() {
+    async startFunction() {
         this.mongoose = require('mongoose');
         this.models = {};
 
-        try { await this.mongoose.connect(this.get_config().url) }
+        try { await this.mongoose.connect(this.getConfig().url) }
         catch (e) {
             modules.logger.log('error', 'Ошибка при подключение к базе данных');
             throw new Error('Ошибка при подключении к базе данных');
@@ -23,7 +23,7 @@ class DB extends Module {
         modules.logger.log('info', 'База данных подключена');
         
         
-        try { await this.init_models() }
+        try { await this.initModels() }
         catch (e) {
             modules.logger.log('error', 'Ошибка при инициализации моделей');
             throw new Error('Ошибка при инициализации моделей');
@@ -31,7 +31,7 @@ class DB extends Module {
         modules.logger.log('info', 'Модели инициализированны');
     }
     
-    async stop_function() {
+    async stopFunction() {
         try { await this.mongoose.disconnect() }
         catch (e) {
             modules.logger.log('error', 'Ошибка при отключении от базы данных');
@@ -43,8 +43,8 @@ class DB extends Module {
     constructor() { super(__dirname) }
 
     /** Инициализация моделей */
-    async init_models() {
-        const path_models = path.join(__dirname, this.get_config().directory);
+    async initModels() {
+        const path_models = path.join(__dirname, this.getConfig().directory);
         const files = fs.readdirSync(path_models).filter(file => path.extname(file) === '.js');
         for (let i = 0; i < files.length; i++) {
             if (files[i] === '_template.js') continue;

@@ -5,12 +5,12 @@ const Module = require('../_class');
 class Logger extends Module {
     #logging = false;
 
-    start_function() { this.#logging = true }
-    stop_function() { this.#logging = false }
+    startFunction() { this.#logging = true }
+    stopFunction() { this.#logging = false }
 
     constructor() {
         super(__dirname);
-        this.check_file();
+        this.checkFile();
     }
 
     /**
@@ -19,21 +19,21 @@ class Logger extends Module {
      * @param {String} default_file_name Путь к файлу
      * @description Проверяет наличие файла для записи
      */
-    check_file(create=true, default_file_name=null) {
-        const directory = path.join(this.get_dirname(), this.get_config().directory);
+    checkFile(create=true, default_file_name=null) {
+        const directory = path.join(this.getDirname(), this.getConfig().directory);
 
         const today = new Date();
-        if (this.get_config().UTC) today.toUTCZone();
+        if (this.getConfig().UTC) today.toUTCZone();
         
         const file_name =  default_file_name ? default_file_name :  
-            this.get_config().format.file_name
+            this.getConfig().format.file_name
                 .replace('%DD%', today.getDate().toStringWithZeros())
                 .replace('%D%', today.getDate())
                 .replace('%MM%', (today.getMonth() + 1).toStringWithZeros())
                 .replace('%M%', (today.getMonth() + 1))
                 .replace('%YYYY%', today.getFullYear())
                 .replace('%YY%', (today.getFullYear() % 100).toStringWithZeros())
-                + '.' + this.get_config().format.file_extension
+                + '.' + this.getConfig().format.file_extension
         ;
 
         const path_to_file = path.join(directory, file_name);
@@ -61,17 +61,17 @@ class Logger extends Module {
     log(level, message) {
         if (!this.#logging) return false;
 
-        const checked = this.check_file(true, null);
+        const checked = this.checkFile(true, null);
         if (!checked.exists) return false;
 
         if (typeof(message) === 'string') message = [ message ];
         message[message.length-1] += '\n';
 
         const now = new Date();
-        if (this.get_config().UTC) now.toUTCZone();
+        if (this.getConfig().UTC) now.toUTCZone();
 
         const print = message.map(text =>
-            this.get_config().format.log
+            this.getConfig().format.log
                 .replace('%level%', level.toUpperCase())
 
                 .replace('%HH%', now.getHours().toStringWithZeros())
@@ -95,11 +95,11 @@ class Logger extends Module {
      * @returns {false|String}
      */
     get(file_name) {
-        const extension = this.get_config().format.file_extension;
+        const extension = this.getConfig().format.file_extension;
         const splited = file_name.split('.');
         if (splited[splited.length - 1] !== extension) file_name += `.${extension}`;
 
-        const checked = this.check_file(false, file_name);
+        const checked = this.checkFile(false, file_name);
         
         return checked.exists ? fs.readFileSync(checked.path_to_file).toString() : false;
     }

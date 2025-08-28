@@ -4,41 +4,41 @@ const Sockets = require('../index');
 class Event extends Method {
     // Переименовывание методов
 
-    get_event_name() { return this.get_url() }
+    getEventName() { return this.getUrl() }
 
     /** @returns {import('socket.io').Socket} */
-    get_socket() { return this.get_express() }
+    getSocket() { return this.getExpress() }
 
     /**
      * 
      * @param {import('socket.io').Socket|Object} arg1 Объект сокета, если запрос проходит через ветку io или объект с передаваемыми данными, если запроходит через ветку socket
      */
-    get_response(arg1) { return true }
+    getResponse(arg1) { return true }
 
     constructor(__dirname, event_name, socket) {
         super(__dirname, event_name, socket);
-        this.send_response = (socket, data, error=false) => Sockets.send(socket, this.get_event_name(), !error ? { response: data } : { error: data });
+        this.sendResponse = (socket, data, error=false) => Sockets.send(socket, this.getEventName(), !error ? { response: data } : { error: data });
     }
 
-    create_node() {
-        if (!this.get_config()) return false;
-        const socket = this.get_socket();
+    createNode() {
+        if (!this.getConfig()) return false;
+        const socket = this.getSocket();
 
-        this.get_socket().on(this.get_event_name(), async data => {
-            const config = this.get_config();
+        this.getSocket().on(this.getEventName(), async data => {
+            const config = this.getConfig();
 
             let response;
             let done = config.use;
-            if (!done) return this.send_response(res, this.get_error(-3), true);
+            if (!done) return this.sendResponse(res, this.getError(-3), true);
 
-            if (config.have_params) done = this.check_params(data);
-            if (done !== true) return this.send_response(socket, { ...this.get_error(-2), param_name: done }, true);
+            if (config.have_params) done = this.checkParams(data);
+            if (done !== true) return this.sendResponse(socket, { ...this.getError(-2), param_name: done }, true);
             
-            try { response = await this.get_response(data) }
+            try { response = await this.getResponse(data) }
             catch (e) { done = false }
 
-            if (!done) return this.send_response(socket, this.get_error(-1), true);
-            this.send_response(socket, response);
+            if (!done) return this.sendResponse(socket, this.getError(-1), true);
+            this.sendResponse(socket, response);
         });
     }
 }
