@@ -1,7 +1,7 @@
 const ora = require('ora');
 
 require('./customize');
-const delay = require('./functions/async_delay');
+const delay = require('./functions/asyncDelay');
 const modules = require('./modules');
 
 /**
