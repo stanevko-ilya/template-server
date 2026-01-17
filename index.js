@@ -1,6 +1,7 @@
-const ora = require('ora');
-
 require('./customize');
+
+const fs = require('fs');
+const path = require('path');
 const delay = require('./functions/asyncDelay');
 const modules = require('./modules');
 
@@ -19,23 +20,22 @@ const launch_queue = Object.keys(modules).sort((module1, module2) => {
 
 async function launch(index) {
     const module = launch_queue[index];
-    const indicator = ora('Запуск модуля ' + module);
-    indicator.start();
+    modules.logger?.info('Запуск модуля ' + module);
 
     let error = false;
     try { await modules[module].start() }
     catch (e) { error = e.message }
 
     if (error) {
-        indicator.fail('Ошибка во время запуска модуля ' + module);
-        console.log('> Ошибка: ' + error);
+        modules.logger?.error(modules.logger.stringError(e));
+        modules.logger?.error('Ошибка во время запуска модуля ' + module);
         if (priority_launch_queue.indexOf(module) !== -1) return;
     }
 
     async function check_status(number) {
         if (number === 3) {
-            indicator.fail(`Модуль ${module} не запустился`);
-            console.log('> Превышено время ожидания запуска модуля ' + module);
+            modules.logger?.error(`Модуль ${module} не запустился`);
+            modules.logger?.warn('> Превышено время ожидания запуска модуля ' + module);
             return;
         }
 
@@ -43,11 +43,11 @@ async function launch(index) {
         
         switch (status) {
             case 'off':
-                indicator.fail(`Модуль ${module} не запущен`);
+                modules.logger?.warn(`Модуль ${module} не запущен`);
             break;
 
             case 'on':
-                indicator.succeed(`Модуль ${module} запущен`);
+                modules.logger?.info(`Модуль ${module} запущен`);
             break;
 
             default:
@@ -61,6 +61,19 @@ async function launch(index) {
     const next_index = index + 1;
     if (next_index < launch_queue.length) await launch(next_index);
 }
+
+// Преобразование параметров запуска
+process.argv.slice(2);
+process.argvParsed = {};
+for (let i = 0; i < process.argv.length; i += 2) {
+    const key = process.argv[i];
+    const value = process.argv[i + 1] || true;
+    process.argvParsed[key.replace(/^--/, '')] = value;
+}
+
+// Подключение глобального конфига (при наличии)
+if (fs.existsSync(path.join(__dirname, './config.json')))
+    process.globalConfig = require('./config.json');
 
 async function run() {
     await delay(1000);

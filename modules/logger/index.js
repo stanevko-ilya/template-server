@@ -54,7 +54,7 @@ class Logger extends Module {
 
     /**
      * 
-     * @param {'info'|'warn'|'error'|String} level Любой уровень сообщения
+     * @param {'info'|'warn'|'error'} level Любой уровень сообщения
      * @param {String|Array<String>} message Сообщение или список сообщений
      * @description Добавляет запись в файл
      */
@@ -87,6 +87,22 @@ class Logger extends Module {
 
         return true;
     }
+
+    /**
+     * @param {String|Array<String>} message Сообщение или список сообщений
+     * @description Добавляет запись в файл с меткой INFO
+     */
+    info(message) { return this.log('info', message) }
+    /**
+     * @param {String|Array<String>} message Сообщение или список сообщений
+     * @description Добавляет запись в файл с меткой WARN
+     */
+    warn(message) { return this.log('warn', message) }
+    /**
+     * @param {String|Array<String>} message Сообщение или список сообщений
+     * @description Добавляет запись в файл с меткой ERROR
+     */
+    error(message) { return this.log('error', message) }
 
     /**
      * 
