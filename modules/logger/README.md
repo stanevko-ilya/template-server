@@ -8,9 +8,9 @@
 |---|---|---|
 | `UTC` | `boolean` | `true` для ведения логов по UTC+0 |
 | `directory` | `string` | Директория для хранения логов |
-| `format.file_name` | `string` | Формат имени файла (`%DD%`, `%MM%`, `%YYYY%`, `%YY%`, `%D%`, `%M%`) |
+| `format.file_name` | `string` | Формат имени файла (`%DD%` — день, `%MM%` — месяц, `%YYYY%`/`%YY%` — год, `%D%`/`%M%` — без нуля) |
 | `format.file_extension` | `string` | Расширение файлов логов |
-| `format.log` | `string` | Формат строки лога (`%level%`, `%HH%`, `%MM%`, `%SS%`, `%H%`, `%M%`, `%S%`, `%text%`) |
+| `format.log` | `string` | Формат строки лога (`%level%`, `%HH%` — часы, `%MM%` — минуты, `%SS%` — секунды, `%text%`; варианты без нуля: `%H%`, `%M%`, `%S%`) |
 | `json_format` | `boolean` | `true` для structured logging в JSON-формате |
 | `save_logs` | `number` | Количество дней хранения логов. Файлы старше этого срока удаляются при запуске |
 

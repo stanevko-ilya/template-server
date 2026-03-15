@@ -48,7 +48,7 @@ class Sockets extends API {
         this.initEvents(this.getSocket(), 'io');
 
         await new Promise((res) => {
-            const port = this.getConfig().port;
+            const port = Number(this.getConfig().port) || 444;
             this.#server.listen(port, () => {
                 modules.logger.log('info', `Socket сервер на ${mode_https ? 'HTTPS' : 'HTTP'} запущен, порт: ${port}`);
                 res(true);

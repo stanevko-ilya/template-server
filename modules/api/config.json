@@ -1,6 +1,5 @@
 {
-    "port": 443,
-    "timeout": 2104,
+    "port": "${API_PORT}",
     "sub_url": "api",
 
     "paths": {

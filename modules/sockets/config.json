@@ -1,5 +1,5 @@
 {
-    "port": 444,
+    "port": "${SOCKETS_PORT}",
 
     "paths": {
         "events": "./events"

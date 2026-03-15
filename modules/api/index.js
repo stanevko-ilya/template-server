@@ -100,7 +100,7 @@ class API extends Module {
         this.#server = (mode_https ? https : http).createServer(options ? options : {}, this.#express);
 
         await new Promise((res) => {
-            const port = this.getConfig().port;
+            const port = Number(this.getConfig().port) || 443;
             this.#server.listen(port, () => {
                 modules.logger.log('info', `${mode_https ? 'HTTPS' : 'HTTP'} сервер запущен, порт: ${port}`);
                 res(true);

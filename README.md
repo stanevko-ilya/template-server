@@ -55,7 +55,7 @@ npm test
 docker compose up -d
 ```
 
-Приложение запустится вместе с MongoDB. Healthcheck настроен на `/api/ping`.
+Приложение запустится вместе с MongoDB. В `Dockerfile` настроен healthcheck на `/api/ping`.
 
 ### PM2
 
@@ -65,7 +65,7 @@ pm2 start ecosystem.config.js
 
 ## Модульная структура
 
-Каждый модуль расположен в каталоге `modules/` и наследуется от базового класса `Module` (`modules/_class.js`), который предоставляет единый lifecycle: `start()` → `stop()`, управление статусом (`on`/`off`/`loading`) и загрузку конфигурации из `config.json`.
+Каждый модуль расположен в каталоге `modules/` и наследуется от базового класса `Module` (`modules/_class.js`), который предоставляет единый lifecycle: `start()` → `stop()`, управление статусом (`on`/`off`) и загрузку конфигурации из `config.json`.
 
 Модули автоматически обнаруживаются по наличию файла `index.js` в подкаталогах `modules/`.
 
@@ -89,7 +89,7 @@ pm2 start ecosystem.config.js
 | `getRandom.js` | Случайные числа (целые и дробные) |
 | `asyncDelay.js` | Промис-обертка над `setTimeout` |
 | `directorySearch.js` | Рекурсивный поиск файлов в каталоге |
-| `array.js` | `isEmpty`, `shuffle`, `clone`, `target`, `equal`, `getDepth` |
+| `array.js` | `isEmpty`, `shuffle`, `cloneArray`, `target`, `equal`, `getDepth` |
 | `date.js` | `toShortDate`, `toUTCZone`, `isValid`, `toTimeDate` |
 | `number.js` | `toStringWithZeros` |
 | `object.js` | `isObject`, `cloneObject`, `deepCopy` |

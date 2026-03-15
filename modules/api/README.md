@@ -6,15 +6,16 @@ REST API сервер на Express 5 с встроенными middleware без
 
 | Параметр | Тип | Описание |
 |---|---|---|
-| `port` | `number` | Порт сервера |
-| `timeout` | `number` | Максимальное время ответа (мс) |
+| `port` | `string` | Порт сервера. Поддерживает интерполяцию: `${API_PORT}` |
 | `sub_url` | `string` | Префикс URL: `api` → `http://host:port/api/...` |
 | `paths.methods` | `string` | Директория с методами |
 | `paths.static` | `string` | Директория со статическими файлами |
 | `headers` | `array` | Дополнительные заголовки (`[{ name, value }]`) |
-| `cors` | `object` | Настройки CORS (передается в `cors()`) |
-| `rateLimit.windowMs` | `number` | Окно rate limit в мс (по умолчанию 15 минут) |
-| `rateLimit.max` | `number` | Максимум запросов за окно (по умолчанию 100) |
+| `cors` | `object` | Настройки CORS (опционально, передается в `cors()`) |
+| `rateLimit.windowMs` | `number` | Окно rate limit в мс (опционально, по умолчанию 15 минут) |
+| `rateLimit.max` | `number` | Максимум запросов за окно (опционально, по умолчанию 100) |
+
+> Параметры `cors` и `rateLimit` отсутствуют в конфиге по умолчанию. При необходимости добавьте их в `config.json` — без них используются стандартные значения.
 
 ## SSL
 
@@ -29,8 +30,9 @@ SSL-сертификаты управляются модулем [SSL](../ssl/).
 4. **express-rate-limit** — ограничение частоты запросов
 5. **static files** — раздача статических файлов
 6. **custom headers** — пользовательские заголовки из конфига
-7. **body parsing** — `express.json()`, `express.urlencoded()`
-8. **request logging** — логирование метода, URL, статуса и времени ответа
+7. **OPTIONS handling** — возврат `200` для preflight-запросов
+8. **body parsing** — `express.json()`, `express.urlencoded()`
+9. **request logging** — логирование метода, URL, статуса и времени ответа
 
 ## Создание методов
 
@@ -148,4 +150,4 @@ return { error_code: 1, status: 404 };
 ## Встроенные методы
 
 - **ping** (`GET /api/ping`) — возвращает `{ ok: true }`
-- **health** (`GET /api/health`) — возвращает статусы всех модулей
+- **health** (`GET /api/health`) — возвращает статусы всех модулей: `{ status: 'ok', logger: 'on', db: 'on', ssl: 'off', api: 'on', sockets: 'on' }`
