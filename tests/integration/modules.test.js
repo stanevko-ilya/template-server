@@ -1,9 +1,31 @@
+const mongoose = require('mongoose');
+
 // Устанавливаем env до загрузки модулей
 process.env.SSL_MODE = 'off';
 process.env.API_PORT = '18080';
 process.env.SOCKETS_PORT = '18081';
+if (!process.env.DB_URL) process.env.DB_URL = 'mongodb://localhost:27017/testdb';
 
 const modules = require('../../modules');
+
+/**
+ * Проверяет доступность MongoDB
+ */
+async function isMongoAvailable() {
+    try {
+        const conn = await mongoose.createConnection(process.env.DB_URL).asPromise();
+        await conn.close();
+        return true;
+    } catch (_e) {
+        return false;
+    }
+}
+
+let mongoAvailable = false;
+
+beforeAll(async () => {
+    mongoAvailable = await isMongoAvailable();
+});
 
 describe('Интеграционный тест модулей', () => {
     const startedModules = [];
@@ -19,6 +41,13 @@ describe('Интеграционный тест модулей', () => {
         await modules.logger.start();
         startedModules.push('logger');
         expect(modules.logger.getStatus()).toBe('on');
+    });
+
+    it('DB запускается и имеет статус on (если MongoDB доступна)', async ({ skip }) => {
+        if (!mongoAvailable) skip();
+        await modules.db.start();
+        startedModules.push('db');
+        expect(modules.db.getStatus()).toBe('on');
     });
 
     it('SSL запускается в режиме off и имеет статус on', async () => {
@@ -44,11 +73,14 @@ describe('Интеграционный тест модулей', () => {
         for (const name of [...startedModules].reverse()) {
             await modules[name].stop();
         }
-        startedModules.length = 0;
 
-        expect(modules.logger.getStatus()).toBe('off');
-        expect(modules.ssl.getStatus()).toBe('off');
-        expect(modules.api.getStatus()).toBe('off');
-        expect(modules.sockets.getStatus()).toBe('off');
+        const expectedOff = ['logger', 'ssl', 'api', 'sockets'];
+        if (mongoAvailable) expectedOff.push('db');
+
+        for (const name of expectedOff) {
+            expect(modules[name].getStatus()).toBe('off');
+        }
+
+        startedModules.length = 0;
     });
 });

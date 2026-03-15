@@ -47,7 +47,7 @@ class DB extends Module {
         const path_models = path.join(__dirname, this.getConfig().directory);
         const files = fs.readdirSync(path_models).filter(file => path.extname(file) === '.js');
         for (let i = 0; i < files.length; i++) {
-            if (files[i] === '_template.js') continue;
+            if (files[i].startsWith('_')) continue;
 
             const schema = require(path.join(path_models, files[i]));
             if (schema instanceof Object) {

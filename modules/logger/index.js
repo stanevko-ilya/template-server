@@ -40,7 +40,9 @@ class Logger extends Module {
         const today = new Date();
         if (this.getConfig().UTC) today.setTime(today.getTime() + today.getTimezoneOffset() * 6e4);
 
-        return this.getConfig().format.file_name
+        const prefix = process.env.VITEST ? 'test-' : '';
+
+        return prefix + this.getConfig().format.file_name
             .replace('%DD%', String(today.getDate()).padStart(2, '0'))
             .replace('%D%', today.getDate())
             .replace('%MM%', String(today.getMonth() + 1).padStart(2, '0'))
