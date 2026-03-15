@@ -5,10 +5,24 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
 
 const Module = require('../_class');
 const directorySearch = require('../../functions/directorySearch');
+
+/**
+ * @description Рекурсивно удаляет ключи, начинающиеся с '$', для защиты от NoSQL-инъекций
+ */
+function sanitize(obj) {
+    if (Array.isArray(obj)) return obj.map(sanitize);
+    if (obj && typeof obj === 'object') {
+        const result = {};
+        for (const key of Object.keys(obj)) {
+            if (!key.startsWith('$')) result[key] = sanitize(obj[key]);
+        }
+        return result;
+    }
+    return obj;
+}
 
 const modules = require('../../modules');
 
@@ -30,7 +44,6 @@ class API extends Module {
         // Security middleware
         this.#express.use(helmet());
         this.#express.use(cors(this.getConfig().cors || {}));
-        this.#express.use(mongoSanitize());
 
         // Rate limiting
         const rateLimitConfig = this.getConfig().rateLimit || {};
@@ -63,6 +76,12 @@ class API extends Module {
         // Body parsing
         this.#express.use(express.json());
         this.#express.use(express.urlencoded({ extended: false }));
+
+        // NoSQL injection protection (Express 5: req.query read-only, sanitизируем только body)
+        this.#express.use((req, _res, next) => {
+            if (req.body) req.body = sanitize(req.body);
+            next();
+        });
 
         // Request logging
         this.#express.use((req, res, next) => {
