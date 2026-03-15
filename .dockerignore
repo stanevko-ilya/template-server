@@ -1,0 +1,12 @@
+node_modules
+.git
+.github
+modules/logger/logs
+tests
+.env
+.env.example
+.editorconfig
+.prettierrc
+eslint.config.js
+vitest.config.js
+*.md
