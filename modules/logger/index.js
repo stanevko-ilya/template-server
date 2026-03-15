@@ -134,6 +134,11 @@ class Logger extends Module {
         const now = new Date();
         if (this.getConfig().UTC) now.setTime(now.getTime() + now.getTimezoneOffset() * 6e4);
 
+        // Выбор потока console по уровню
+        const consoleFn = level === 'error' ? console.error
+            : level === 'warn' ? console.warn
+            : console.log;
+
         // JSON-формат для structured logging
         if (this.getConfig().json_format) {
             const entries = message.map(text => JSON.stringify({
@@ -141,7 +146,9 @@ class Logger extends Module {
                 timestamp: now.toISOString(),
                 message: text,
             }));
-            stream.write(entries.join('\n') + '\n');
+            const output = entries.join('\n') + '\n';
+            stream.write(output);
+            consoleFn(output.trimEnd());
             return true;
         }
 
@@ -160,7 +167,9 @@ class Logger extends Module {
 
                 .replace('%text%', text)
         );
-        stream.write(print.join('\n'));
+        const output = print.join('\n');
+        stream.write(output);
+        consoleFn(output.trimEnd());
 
         return true;
     }
