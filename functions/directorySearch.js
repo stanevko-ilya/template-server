@@ -8,7 +8,7 @@ const path = require('path');
  * @param {String} file_name Название выполняемого файла
  * @description Функция для перебора всего каталога(савм каталог + подкаталоги) и поиска исполняемых файлов
  */
-function func(directory_path, callback=(file_path)=>{}, file_name='index.js') {
+function func(directory_path, callback=(_file_path)=>{}, file_name='index.js') {
     const file_path = path.join(directory_path, file_name);
     const available_executable_file = fs.existsSync(file_path);
     if (available_executable_file) callback(file_path);

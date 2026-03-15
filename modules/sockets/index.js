@@ -29,7 +29,7 @@ class Sockets extends API {
             file_path => {
                 const splited = file_path.replace(/\\/g, '/').split('/');
                 /** @type {import('./events/_class')} `*/
-                const event = new (require(file_path))(splited.slice(splited.findIndex(e => e === this.getConfig().paths.events.split('/').reverse()[0]) + 2, splited.length - 1).join('/'), socket);
+                new (require(file_path))(splited.slice(splited.findIndex(e => e === this.getConfig().paths.events.split('/').reverse()[0]) + 2, splited.length - 1).join('/'), socket);
             },
             'index.js'
         );

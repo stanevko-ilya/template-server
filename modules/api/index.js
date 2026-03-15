@@ -99,7 +99,7 @@ class API extends Module {
             file_path => {
                 const splited = file_path.replace(/\\/g, '/').split('/');
                 /** @type {import('./methods/_class')} */
-                const method = new (require(file_path))('/' + this.getConfig().sub_url + '/' + splited.slice(splited.findIndex(e => e === this.getConfig().paths.methods.split('/').reverse()[0]) + 1, splited.length - 1).join('/'), this.#express);
+                new (require(file_path))('/' + this.getConfig().sub_url + '/' + splited.slice(splited.findIndex(e => e === this.getConfig().paths.methods.split('/').reverse()[0]) + 1, splited.length - 1).join('/'), this.#express);
             },
             'index.js'
         );

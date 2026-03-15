@@ -13,7 +13,7 @@ class Event extends Method {
      * 
      * @param {import('socket.io').Socket|Object} arg1 Объект сокета, если запрос проходит через ветку io или объект с передаваемыми данными, если запроходит через ветку socket
      */
-    getResponse(arg1) { return true }
+    getResponse(_arg1) { return true }
 
     constructor(__dirname, event_name, socket) {
         super(__dirname, event_name, socket);
@@ -35,7 +35,7 @@ class Event extends Method {
             if (done !== true) return this.sendResponse(socket, { ...this.getError(-2), param_name: done }, true);
             
             try { response = await this.getResponse(data) }
-            catch (e) { done = false }
+            catch (_e) { done = false }
 
             if (!done) return this.sendResponse(socket, this.getError(-1), true);
             this.sendResponse(socket, response);

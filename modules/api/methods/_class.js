@@ -2,7 +2,6 @@ const Module = require('../../_class');
 const API = require('../index');
 const jwt = require('jsonwebtoken');
 
-const modules = require('../../../modules');
 const { default: mongoose } = require('mongoose');
 
 class Method extends Module {
@@ -50,7 +49,7 @@ class Method extends Module {
      * @param {Object} res Ответ пользователю
      * @returns {*} Ответ вызова метода
      */
-    async getResponse(req, res) { return true }
+    async getResponse(_req, _res) { return true }
 
     /**
      * Возвращает конфигурацию теста для данного метода, или null если тест не определён.
@@ -113,7 +112,7 @@ class Method extends Module {
                         value = new mongoose.Types.ObjectId(value);
                     break;
                 }
-            } catch (e) { return key }
+            } catch (_e) { return key }
 
             
             if ('valid_values' in param_config && param_config.valid_values.indexOf(value) === -1) return key; 
@@ -183,7 +182,7 @@ class Method extends Module {
             if (done !== true) return this.sendResponse(res, { ...this.getError(-2), param_name: done }, 400);
             
             try { response = await this.getResponse(req, res) }
-            catch (e) { done = false }
+            catch (_e) { done = false }
 
             if (!done) return this.sendResponse(res, this.getError(-1), 500);
             

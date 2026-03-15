@@ -64,7 +64,7 @@ class Logger extends Module {
 
         if (!fs.existsSync(path_to_file)) {
             try { fs.writeFileSync(path_to_file, '[INFO]Файл логирования инициализирован\n', { flag: 'w+' }) }
-            catch (e) { /* ignore */ }
+            catch (_e) { /* ignore */ }
         }
     }
 
@@ -87,7 +87,7 @@ class Logger extends Module {
 
             if (!fs.existsSync(path_to_file)) {
                 try { fs.writeFileSync(path_to_file, '[INFO]Файл логирования инициализирован\n', { flag: 'w+' }) }
-                catch (e) { return null }
+                catch (_e) { return null }
             }
 
             this.#stream = fs.createWriteStream(path_to_file, { flags: 'a' });
@@ -211,7 +211,7 @@ class Logger extends Module {
         try {
             const content = await fsp.readFile(path_to_file, 'utf-8');
             return content;
-        } catch (e) {
+        } catch (_e) {
             return false;
         }
     }

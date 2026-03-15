@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { Model, Schema } = require('mongoose');
+const { Schema } = require('mongoose');
 
 const Module = require('../_class');
 const modules = require('../../modules');
@@ -18,7 +18,7 @@ class DB extends Module {
         try { await this.mongoose.connect(this.getConfig().url) }
         catch (e) {
             modules.logger.log('error', 'Ошибка при подключение к базе данных');
-            throw new Error('Ошибка при подключении к базе данных');
+            throw new Error('Ошибка при подключении к базе данных', { cause: e });
         }
         modules.logger.log('info', 'База данных подключена');
         
@@ -26,7 +26,7 @@ class DB extends Module {
         try { await this.initModels() }
         catch (e) {
             modules.logger.log('error', 'Ошибка при инициализации моделей');
-            throw new Error('Ошибка при инициализации моделей');
+            throw new Error('Ошибка при инициализации моделей', { cause: e });
         }
         modules.logger.log('info', 'Модели инициализированны');
     }
@@ -35,7 +35,7 @@ class DB extends Module {
         try { await this.mongoose.disconnect() }
         catch (e) {
             modules.logger.log('error', 'Ошибка при отключении от базы данных');
-            throw new Error('Ошибка при отключении от базы данных');
+            throw new Error('Ошибка при отключении от базы данных', { cause: e });
         }
         modules.logger.log('info', 'База данных отключена');
     }
@@ -74,14 +74,13 @@ class DB extends Module {
         if (!(model_name in this.models)) return error('Модель не найдена или не инициализирована');
         if (!(method_name in this.models[model_name])) return error('Данный метод не найден у модели');
 
-        let result, done = true;
+        let result;
         try { result = await this.models[model_name][method_name](...params) }
         catch (e) {
-            done = false;
             return error(`Ошибка при выполнении запроса. Сообщение ошибки: ${e.message}`);
         }
 
-        if (done) return JSON.parse(JSON.stringify(result));
+        return JSON.parse(JSON.stringify(result));
     }
 }
 
