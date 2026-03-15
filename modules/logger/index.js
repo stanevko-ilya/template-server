@@ -55,6 +55,8 @@ class Logger extends Module {
      */
     #checkFileSync() {
         const directory = path.join(this.getDirname(), this.getConfig().directory);
+        fs.mkdirSync(directory, { recursive: true });
+
         const file_name = this.#getFileName();
         const path_to_file = path.join(directory, file_name);
 
