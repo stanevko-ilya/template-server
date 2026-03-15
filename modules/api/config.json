@@ -1,13 +1,10 @@
 {
-    "https": false,
-    "port": 443,
-    "timeout": 2104,
+    "port": "${API_PORT}",
     "sub_url": "api",
 
     "paths": {
         "methods": "./methods",
-        "static": "./public",
-        "ssl": "../../SSL-certification"
+        "static": "./public"
     },
 
     "headers": []

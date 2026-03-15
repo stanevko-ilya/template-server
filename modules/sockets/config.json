@@ -1,9 +1,7 @@
 {
-    "https": false,
-    "port": 444,
+    "port": "${SOCKETS_PORT}",
 
     "paths": {
-        "events": "./events",
-        "ssl": "../../SSL-certification"
+        "events": "./events"
     }
 }

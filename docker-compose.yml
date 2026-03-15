@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    ports:
+      - "443:3000"
+      - "444:3001"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      - DB_URL=mongodb://mongo:27017/app
+      - API_PORT=3000
+      - SOCKETS_PORT=3001
+      - SSL_MODE=off
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: mongosh --eval 'db.runCommand({ping:1})' --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  mongo-data:

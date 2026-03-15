@@ -1,3 +1,0 @@
-key.key (-----BEGIN RSA PRIVATE KEY-----)
-certificat.crt(-----BEGIN CERTIFICATE-----(Основной))
-domain.cabundle(-----BEGIN CERTIFICATE-----(Основной), —---BEGIN CERTIFICATE-----(корневой), —---BEGIN CERTIFICATE-----(промежуточный))

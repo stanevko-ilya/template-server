@@ -1,2 +1,4 @@
 /node_modules
 /modules/logger/logs/*.log
+/modules/ssl/certs
+.env

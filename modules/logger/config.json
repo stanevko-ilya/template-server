@@ -6,5 +6,6 @@
         "file_extension": "log",
         "log": "[%level%][%HH%:%MM%:%SS%]%text%"
     },
+    "json_format": false,
     "save_logs": 180
 }
