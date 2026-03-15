@@ -1,47 +1,151 @@
-# Система API
-Данный модуль позволит создать и настроить api
+# Модуль API
+
+REST API сервер на Express 5 с встроенными middleware безопасности и JWT-авторизацией.
 
 ## Файл конфигурации
-Параметры:
-- `https` - `true` для использования https-протокола
-- `port` - порт, на котором будет запускаться сервер
-- `timeout` - максимальное время в мс для ответа сервера на запросы
-- `sub_url` - дополнительный путь в адрессной строке для `'api'` => `http://{ip}:{port}/api`
 
-## Настройка SSL
-Для домена, на котором планируется развернуть API, необходимо выпустить SSL-сертифика и запонить файлы в папке `SSL-certification`:
-- `key.key` - `-----BEGIN RSA PRIVATE KEY-----`
-- `certificat.crt` - `-----BEGIN CERTIFICATE-----(Основной)`
-- `domain.cabundle` - `-----BEGIN CERTIFICATE-----(Основной)`, `-----BEGIN CERTIFICATE-----(корневой)`, `-----BEGIN CERTIFICATE-----(промежуточный)`
+| Параметр | Тип | Описание |
+|---|---|---|
+| `port` | `number` | Порт сервера |
+| `timeout` | `number` | Максимальное время ответа (мс) |
+| `sub_url` | `string` | Префикс URL: `api` → `http://host:port/api/...` |
+| `paths.methods` | `string` | Директория с методами |
+| `paths.static` | `string` | Директория со статическими файлами |
+| `headers` | `array` | Дополнительные заголовки (`[{ name, value }]`) |
+| `cors` | `object` | Настройки CORS (передается в `cors()`) |
+| `rateLimit.windowMs` | `number` | Окно rate limit в мс (по умолчанию 15 минут) |
+| `rateLimit.max` | `number` | Максимум запросов за окно (по умолчанию 100) |
+
+## SSL
+
+SSL-сертификаты управляются модулем [SSL](../ssl/). Если SSL-модуль предоставляет credentials, сервер запускается по HTTPS, иначе — по HTTP.
+
+## Middleware
+
+Все запросы проходят через цепочку middleware:
+1. **helmet** — security-заголовки
+2. **cors** — CORS-политики
+3. **express-mongo-sanitize** — защита от NoSQL-инъекций
+4. **express-rate-limit** — ограничение частоты запросов
+5. **static files** — раздача статических файлов
+6. **custom headers** — пользовательские заголовки из конфига
+7. **body parsing** — `express.json()`, `express.urlencoded()`
+8. **request logging** — логирование метода, URL, статуса и времени ответа
 
 ## Создание методов
-Для добавления метода необходимо создать каталог с название метода внутри каталог `methods`, внутри каталога необходимо создать файл `index.js` и описать обработчик в виде класса. В функцию `getResponse` передаются параметры `req` и `res`, при помощи которых можно взаимодействовать с интерфейсом запроса, для использования заготовленного функционала достаточно вернуть объект, который будет отправлен для в виде овтета.
 
-Для заготовленного метода ping URL адрес по умолчанию будет: `http://{ip}:{port}/api/ping`, если необходимо, чтобы URL был `http://{ip}:{port}/api/system/ping`, то в каталоге `methods` необходимо создать каталог `saystem`, и в нём создать каталог `ping`, в котором будет описан обработчки
+Создайте каталог с именем метода внутри `methods/`, добавьте `index.js` и `config.json`.
 
-## Файл конфигурации метода
-Параметры:
-- `use` - флаг, отвечающий за прослушевание метода
-- `method` - тип метода: `'get'`, `'post'` и т.д.
-- `params` - параметры, которые должен принимать метод
-- `errors` - дополнительные ошибки, которые могут возникнуть при выполнении запроса
-
-Формат для параметра `params`:
-```javascript
-"params": [{
-    "name": String, // Имя параметра
-    "required": Boolean, // Является ли параметр обязательным
-    "type": "string"|"number"|"object"|"boolean"|"objectId", // Тип получаемого значения
-    "orientation": "positive"|"negative", // Используется для присвоения определнного знака числу, если type = "number"; Не указывайте, если знак должен остаться неизменным
-    "interval": [Number, Number] // Проверка принадлежности значения к промежутку, если type = "number"; Не указывайте, если ограничей для значения нет
-    "valid_values": Array<*> // Допустимые значения параметра
-}]
+Структура каталогов определяет URL:
+```
+methods/ping/         → /api/ping
+methods/system/ping/  → /api/system/ping
+methods/users/        → /api/users
 ```
 
-Формат для параметра `errors`:
+### index.js метода
+
 ```javascript
-"errors": [{
-    "code": Number, // Код ошибки для идентификации через Method.getError
-    "message": String, // Возвращаемое сообщение
-}]
+const Method = require('../_class');
+
+class Ping extends Method {
+    async getResponse(req, res) {
+        return { ok: true };
+    }
+
+    constructor(url, express) {
+        super(__dirname, url, express);
+    }
+}
+
+module.exports = Ping;
 ```
+
+### config.json метода
+
+```json
+{
+    "use": true,
+    "method": "get",
+    "params": [],
+    "errors": []
+}
+```
+
+| Параметр | Тип | Описание |
+|---|---|---|
+| `use` | `boolean` | Включен ли метод |
+| `method` | `string` | HTTP-метод: `get`, `post`, `put`, `delete` и т.д. |
+| `params` | `array` | Параметры запроса (см. ниже) |
+| `errors` | `array` | Дополнительные ошибки метода |
+| `auth` | `object` | Настройки авторизации (см. ниже) |
+
+### Параметры запроса
+
+```json
+{
+    "name": "user_id",
+    "required": true,
+    "type": "objectId",
+    "orientation": "positive",
+    "interval": [0, 100],
+    "valid_values": ["a", "b", "c"]
+}
+```
+
+| Поле | Тип | Описание |
+|---|---|---|
+| `name` | `string` | Имя параметра |
+| `required` | `boolean` | Обязательный ли параметр |
+| `type` | `string` | Тип: `string`, `number`, `object`, `boolean`, `objectId` |
+| `orientation` | `string` | `positive` или `negative` — приведение знака числа |
+| `interval` | `[number, number]` | Допустимый диапазон для чисел |
+| `valid_values` | `array` | Допустимые значения |
+
+### Дополнительные ошибки
+
+```json
+{
+    "errors": [
+        { "code": 1, "message": "Пользователь не найден" }
+    ]
+}
+```
+
+Для возврата ошибки из `getResponse`:
+```javascript
+return { error_code: 1, status: 404 };
+```
+
+### Встроенные ошибки
+
+| Код | Описание |
+|---|---|
+| `-1` | Ошибка во время выполнения запроса |
+| `-2` | Ошибка во время проверки параметров |
+| `-3` | Метод отключен |
+| `-4` | Необходима авторизация |
+| `-5` | Недостаточно прав |
+
+## JWT-авторизация
+
+Добавьте секцию `auth` в `config.json` метода:
+
+```json
+{
+    "use": true,
+    "method": "get",
+    "auth": {
+        "roles": ["admin", "moderator"]
+    }
+}
+```
+
+Токен передается в заголовке `Authorization: Bearer <token>`. Декодированный payload доступен в `req.user`.
+
+Переменная окружения `JWT_SECRET` задает секретный ключ.
+
+## Встроенные методы
+
+- **ping** (`GET /api/ping`) — возвращает `{ ok: true }`
+- **health** (`GET /api/health`) — возвращает статусы всех модулей

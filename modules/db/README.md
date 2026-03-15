@@ -1,21 +1,40 @@
-# Система БД
-Данный модуль позволит управлять mongoDB
+# Модуль DB
+
+Подключение и работа с MongoDB через Mongoose.
 
 ## Файл конфигурации
-Параметры:
-- `url` - адрес для подключения к mongoDB
+
+| Параметр | Тип | Описание |
+|---|---|---|
+| `url` | `string` | URL подключения к MongoDB. Поддерживает интерполяцию: `${DB_URL}` |
+| `directory` | `string` | Директория с файлами моделей |
+
+## Переменные окружения
+
+```
+DB_URL=mongodb://localhost:27017/mydb
+```
 
 ## Создание моделей
-Для создание модели в базе необходимо описать схему в каталоге `models`:
-https://github.com/stanevko-ilya/template-server/blob/v2/modules/db/models/_template.js
-> Какое имя файла будет присвоено схеме, такое же имя будет присвоено моделе.
+
+Создайте файл в каталоге `models/` с описанием схемы Mongoose. Имя файла станет именем модели:
+
+```javascript
+// modules/db/models/user.js
+const { Schema } = require('mongoose');
+
+module.exports = new Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+});
+```
 
 ## Использование
-Все инициализированные модели хранятся в объекте `models` в модуле `db`, пример запроса:
+
 ```javascript
-const { db } = require('modules.js');
-async function req() {
-    console.log(await db.models.template.find());
-}
-req();
+const { db } = require('./modules');
+
+// Все модели доступны через db.models
+const users = await db.models.user.find();
+const user = await db.models.user.create({ name: 'Test', email: 'test@test.com' });
 ```
