@@ -1,5 +1,4 @@
 const path = require('path');
-const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const express = require('express');
@@ -23,22 +22,6 @@ class API extends Module {
      */
     static send(res, data, code=200) { res.status(code).send(code < 400 ? { response: data } : { error: data }) }
 
-    /** @type {{ key: String, cert: String, ca: String }} */
-    #options;
-    getOptions() { return this.#options }
-    loadOptions() {
-        try {
-            const SSL_PATH = path.join(this.getDirname(), this.getConfig().paths.ssl);
-            this.#options = {
-                key: fs.readFileSync(path.join(SSL_PATH, 'key.key')), 
-                cert: fs.readFileSync(path.join(SSL_PATH, 'certificate.crt')), 
-                ca: fs.readFileSync(path.join(SSL_PATH, 'domain.cabundle'))
-            }
-        } catch (e) {
-            modules.logger.log('warn', e.message);
-        }
-    }
-    
     /** @type {express.Express} */
     #express;
     #initExpress() {
@@ -110,26 +93,25 @@ class API extends Module {
         this.#initExpress();
         this.#initMethod();
 
-        const mode_https = this.getConfig().https;
+        // SSL-credentials из модуля ssl
+        const options = modules.ssl?.getCredentials();
+        const mode_https = !!options;
 
-        if (!this.getOptions() && mode_https) this.loadOptions();
-        const options = this.getOptions();
-        
         this.#server = (mode_https ? https : http).createServer(options ? options : {}, this.#express);
-        
+
         await new Promise((res) => {
             const port = this.getConfig().port;
             this.#server.listen(port, () => {
-                modules.logger.log('info', `${mode_https ? 'HTTPS' : 'HTTP'} сервер запрущен, порт: ${port}`);
+                modules.logger.log('info', `${mode_https ? 'HTTPS' : 'HTTP'} сервер запущен, порт: ${port}`);
                 res(true);
             })
         });
     }
-    
+
     async stopFunction() {
         await new Promise((res) =>
             this.#server.close(() => {
-                modules.logger.log('info', `${this.getConfig().https ? 'HTTPS' : 'HTTP'} сервер остановлен`);
+                modules.logger.log('info', 'Сервер остановлен');
                 res(true);
             })
         );

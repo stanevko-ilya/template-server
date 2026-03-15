@@ -1,9 +1,7 @@
 {
-    "https": false,
     "port": 444,
 
     "paths": {
-        "events": "./events",
-        "ssl": "../../SSL-certification"
+        "events": "./events"
     }
 }
