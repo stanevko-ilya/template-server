@@ -2,15 +2,16 @@ services:
   app:
     build: .
     ports:
-      - "443:443"
-      - "444:444"
+      - "443:3000"
+      - "444:3001"
     depends_on:
       mongo:
         condition: service_healthy
     environment:
       - DB_URL=mongodb://mongo:27017/app
-      - API_PORT=443
-      - SOCKETS_PORT=444
+      - API_PORT=3000
+      - SOCKETS_PORT=3001
+      - SSL_MODE=off
     restart: unless-stopped
 
   mongo:

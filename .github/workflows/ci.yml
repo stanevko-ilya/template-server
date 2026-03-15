@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [v2, main]
+    branches: [main]
   pull_request:
-    branches: [v2, main]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -51,7 +51,7 @@ jobs:
       - name: Run all tests
         run: npm test
         env:
-          DB_URL: mongodb://localhost:27017/testdb
+          DB_URL: mongodb://localhost:27017/testdb-test
 
   test-windows:
     name: Test (Windows)
@@ -64,10 +64,17 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Install and start MongoDB
+        uses: ankane/setup-mongodb@v1
+        with:
+          mongodb-version: '7.0'
+
       - run: npm ci
 
       - name: Run all tests
         run: npm test
+        env:
+          DB_URL: mongodb://localhost:27017/testdb-test
 
   docker:
     name: Docker

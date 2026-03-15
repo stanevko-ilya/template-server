@@ -13,7 +13,9 @@ const modules = require('../../modules');
  */
 async function isMongoAvailable() {
     try {
-        const conn = await mongoose.createConnection(process.env.DB_URL).asPromise();
+        const conn = await mongoose.createConnection(process.env.DB_URL, {
+            serverSelectionTimeoutMS: 3000,
+        }).asPromise();
         await conn.close();
         return true;
     } catch (_e) {
