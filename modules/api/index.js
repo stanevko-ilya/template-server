@@ -3,7 +3,10 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const express = require('express');
-const body_parser = require('body-parser');
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
 
 const Module = require('../_class');
 const directorySearch = require('../../functions/directorySearch');
@@ -40,8 +43,25 @@ class API extends Module {
     #express;
     #initExpress() {
         this.#express = express();
+
+        // Security middleware
+        this.#express.use(helmet());
+        this.#express.use(cors(this.getConfig().cors || {}));
+        this.#express.use(mongoSanitize());
+
+        // Rate limiting
+        const rateLimitConfig = this.getConfig().rateLimit || {};
+        this.#express.use(rateLimit({
+            windowMs: rateLimitConfig.windowMs || 15 * 60 * 1000,
+            max: rateLimitConfig.max || 100,
+            standardHeaders: true,
+            legacyHeaders: false,
+        }));
+
+        // Static files
         this.#express.use('/', express.static(path.join(this.getDirname(), this.getConfig().paths.static)));
-        
+
+        // Custom headers
         const headers = this.getConfig().headers;
         if (headers instanceof Array && headers.length > 0)
             this.#express.use((req, res, next) => {
@@ -57,10 +77,18 @@ class API extends Module {
             next();
         });
 
-        this.#express.use(body_parser.json());
-        this.#express.use(body_parser.urlencoded({ extended: false }));
+        // Body parsing
+        this.#express.use(express.json());
+        this.#express.use(express.urlencoded({ extended: false }));
 
-        //Дополнительные обработчики
+        // Request logging
+        this.#express.use((req, res, next) => {
+            const start = Date.now();
+            res.on('finish', () => {
+                modules.logger?.info(`${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
+            });
+            next();
+        });
     }
     
     #initMethod() {

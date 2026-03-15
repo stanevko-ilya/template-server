@@ -8,8 +8,8 @@ function createTypesValidator(types, canBeNull=false) {
                 const done = types.includes(typeof val) || canBeNull && val == null;
                 if (done) return true;
                 return types.find(type => {
-                    try { val instanceof type }
-                    catch (e) {  }
+                    try { return val instanceof type }
+                    catch (_e) { /* не является конструктором */ }
                 });
             },
             message: `Значение должно быть${canBeNull ? ' null' : ''} или одним из типов: ${types.join(',')}`

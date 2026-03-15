@@ -14,6 +14,22 @@ class Module {
      * @param {String} config_path Путь к файлу конфига
      * @param {Function|null} format Функция дял автоматического редактирование конфига при загрузке (добавление/удаление полей)
      */
+    /**
+     * @description Подставляет значения переменных окружения вместо ${VAR_NAME} в строках конфига
+     */
+    #interpolateEnv(obj) {
+        if (typeof obj === 'string') {
+            return obj.replace(/\$\{(\w+)\}/g, (_, key) => process.env[key] || '');
+        }
+        if (Array.isArray(obj)) return obj.map(item => this.#interpolateEnv(item));
+        if (obj && typeof obj === 'object') {
+            const result = {};
+            for (const key in obj) result[key] = this.#interpolateEnv(obj[key]);
+            return result;
+        }
+        return obj;
+    }
+
     loadConfig(config_path, format=null) {
         if (typeof(config_path) !== 'string') throw new Error('Неверный формат данных');
         let done = true;
@@ -23,6 +39,7 @@ class Module {
         catch (e) { done = false }
 
         if (done) {
+            config = this.#interpolateEnv(config);
             if (format instanceof Function) config = format(config);
             this.#config = config;
         }

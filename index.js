@@ -1,4 +1,4 @@
-require('./customize');
+require('dotenv').config();
 
 const fs = require('fs');
 const path = require('path');
@@ -27,7 +27,7 @@ async function launch(index) {
     catch (e) { error = e.message }
 
     if (error) {
-        modules.logger?.error(modules.logger.stringError(e));
+        modules.logger?.error(error);
         modules.logger?.error('Ошибка во время запуска модуля ' + module);
         if (priority_launch_queue.indexOf(module) !== -1) return;
     }
@@ -63,17 +63,61 @@ async function launch(index) {
 }
 
 // Преобразование параметров запуска
-process.argv.slice(2);
+const args = process.argv.slice(2);
 process.argvParsed = {};
-for (let i = 0; i < process.argv.length; i += 2) {
-    const key = process.argv[i];
-    const value = process.argv[i + 1] || true;
+for (let i = 0; i < args.length; i += 2) {
+    const key = args[i];
+    const value = args[i + 1] || true;
     process.argvParsed[key.replace(/^--/, '')] = value;
 }
 
 // Подключение глобального конфига (при наличии)
 if (fs.existsSync(path.join(__dirname, './config.json')))
     process.globalConfig = require('./config.json');
+
+// Graceful shutdown
+async function shutdown(signal) {
+    modules.logger?.info(`Получен сигнал ${signal}, завершение работы...`);
+
+    const reversed = [...launch_queue].reverse();
+    for (const name of reversed) {
+        try {
+            if (modules[name]?.getStatus() === 'on') {
+                await modules[name].stop();
+                modules.logger?.info(`Модуль ${name} остановлен`);
+            }
+        } catch (e) {
+            modules.logger?.error(`Ошибка при остановке модуля ${name}: ${e.message}`);
+        }
+    }
+
+    process.exit(0);
+}
+
+const SHUTDOWN_TIMEOUT = 10_000;
+
+for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.on(signal, () => {
+        const timer = setTimeout(() => {
+            modules.logger?.error('Превышено время ожидания завершения, принудительный выход');
+            process.exit(1);
+        }, SHUTDOWN_TIMEOUT);
+        timer.unref();
+
+        shutdown(signal);
+    });
+}
+
+process.on('uncaughtException', (err) => {
+    modules.logger?.error(`Необработанное исключение: ${err.message}`);
+    modules.logger?.error(err.stack || '');
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+    modules.logger?.error(`Необработанный промис: ${reason}`);
+    process.exit(1);
+});
 
 async function run() {
     await delay(1000);

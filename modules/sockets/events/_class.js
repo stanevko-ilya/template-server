@@ -29,7 +29,7 @@ class Event extends Method {
 
             let response;
             let done = config.use;
-            if (!done) return this.sendResponse(res, this.getError(-3), true);
+            if (!done) return this.sendResponse(socket, this.getError(-3), true);
 
             if (config.have_params) done = this.checkParams(data);
             if (done !== true) return this.sendResponse(socket, { ...this.getError(-2), param_name: done }, true);

@@ -1,59 +1,124 @@
 const fs = require('fs');
+const fsp = require('fs/promises');
 const path = require('path');
 const Module = require('../_class');
 
 class Logger extends Module {
     #logging = false;
 
-    startFunction() { this.#logging = true }
-    stopFunction() { this.#logging = false }
+    /** @type {fs.WriteStream|null} */
+    #stream = null;
+    #streamDate = null;
+
+    startFunction() {
+        this.#logging = true;
+        this.#cleanOldLogs();
+    }
+
+    async stopFunction() {
+        this.#logging = false;
+        if (this.#stream) {
+            await new Promise(resolve => this.#stream.end(resolve));
+            this.#stream = null;
+            this.#streamDate = null;
+        }
+    }
 
     constructor() {
         super(__dirname);
-        this.checkFile();
+        // Синхронная проверка/создание файла при инициализации
+        this.#checkFileSync();
     }
 
     /**
-     * 
-     * @param {Boolean} create Необходимо ли создать файл, если он отсутствует
-     * @param {String} default_file_name Путь к файлу
-     * @description Проверяет наличие файла для записи
+     * @description Формирует имя файла для текущей даты
+     * @returns {string}
      */
-    checkFile(create=true, default_file_name=null) {
-        const directory = path.join(this.getDirname(), this.getConfig().directory);
+    #getFileName(default_file_name = null) {
+        if (default_file_name) return default_file_name;
 
         const today = new Date();
-        if (this.getConfig().UTC) today.toUTCZone();
-        
-        const file_name =  default_file_name ? default_file_name :  
-            this.getConfig().format.file_name
-                .replace('%DD%', today.getDate().toStringWithZeros())
-                .replace('%D%', today.getDate())
-                .replace('%MM%', (today.getMonth() + 1).toStringWithZeros())
-                .replace('%M%', (today.getMonth() + 1))
-                .replace('%YYYY%', today.getFullYear())
-                .replace('%YY%', (today.getFullYear() % 100).toStringWithZeros())
-                + '.' + this.getConfig().format.file_extension
-        ;
+        if (this.getConfig().UTC) today.setTime(today.getTime() + today.getTimezoneOffset() * 6e4);
 
-        const path_to_file = path.join(directory, file_name);
-        const files_in_directory = fs.readdirSync(directory);
-        const exists_file = Boolean(files_in_directory.find(file => file === file_name));
-
-        let created = false;
-        if (!exists_file && create) {
-            created = true;
-            try { fs.writeFileSync(path_to_file, '[INFO]Файл логирования инициализирован\n', { flag: 'w+' }) }
-            catch (e) { created = false }
-        }
-
-        
-        const result = { exists: created || exists_file, created, path_to_file };
-        return result;
+        return this.getConfig().format.file_name
+            .replace('%DD%', String(today.getDate()).padStart(2, '0'))
+            .replace('%D%', today.getDate())
+            .replace('%MM%', String(today.getMonth() + 1).padStart(2, '0'))
+            .replace('%M%', (today.getMonth() + 1))
+            .replace('%YYYY%', today.getFullYear())
+            .replace('%YY%', String(today.getFullYear() % 100).padStart(2, '0'))
+            + '.' + this.getConfig().format.file_extension;
     }
 
     /**
-     * 
+     * @description Синхронная проверка файла (только для конструктора)
+     */
+    #checkFileSync() {
+        const directory = path.join(this.getDirname(), this.getConfig().directory);
+        const file_name = this.#getFileName();
+        const path_to_file = path.join(directory, file_name);
+
+        if (!fs.existsSync(path_to_file)) {
+            try { fs.writeFileSync(path_to_file, '[INFO]Файл логирования инициализирован\n', { flag: 'w+' }) }
+            catch (e) { /* ignore */ }
+        }
+    }
+
+    /**
+     * @description Получает WriteStream для текущего файла логов
+     * @returns {fs.WriteStream}
+     */
+    #getStream() {
+        const file_name = this.#getFileName();
+
+        // Если дата сменилась — закрыть старый стрим и открыть новый
+        if (this.#stream && this.#streamDate !== file_name) {
+            this.#stream.end();
+            this.#stream = null;
+        }
+
+        if (!this.#stream) {
+            const directory = path.join(this.getDirname(), this.getConfig().directory);
+            const path_to_file = path.join(directory, file_name);
+
+            if (!fs.existsSync(path_to_file)) {
+                try { fs.writeFileSync(path_to_file, '[INFO]Файл логирования инициализирован\n', { flag: 'w+' }) }
+                catch (e) { return null }
+            }
+
+            this.#stream = fs.createWriteStream(path_to_file, { flags: 'a' });
+            this.#streamDate = file_name;
+        }
+
+        return this.#stream;
+    }
+
+    /**
+     * @description Удаляет файлы логов старше save_logs дней
+     */
+    async #cleanOldLogs() {
+        const saveDays = this.getConfig().save_logs;
+        if (!saveDays || saveDays <= 0) return;
+
+        const directory = path.join(this.getDirname(), this.getConfig().directory);
+        const cutoff = Date.now() - saveDays * 24 * 60 * 60 * 1000;
+
+        try {
+            const files = await fsp.readdir(directory);
+            for (const file of files) {
+                const filePath = path.join(directory, file);
+                try {
+                    const stat = await fsp.stat(filePath);
+                    if (stat.mtime.getTime() < cutoff) {
+                        await fsp.unlink(filePath);
+                    }
+                } catch (_e) { /* skip */ }
+            }
+        } catch (_e) { /* directory might not exist */ }
+    }
+
+    /**
+     *
      * @param {'info'|'warn'|'error'} level Любой уровень сообщения
      * @param {String|Array<String>} message Сообщение или список сообщений
      * @description Добавляет запись в файл
@@ -61,29 +126,41 @@ class Logger extends Module {
     log(level, message) {
         if (!this.#logging) return false;
 
-        const checked = this.checkFile(true, null);
-        if (!checked.exists) return false;
+        const stream = this.#getStream();
+        if (!stream) return false;
 
         if (typeof(message) === 'string') message = [ message ];
-        message[message.length-1] += '\n';
 
         const now = new Date();
-        if (this.getConfig().UTC) now.toUTCZone();
+        if (this.getConfig().UTC) now.setTime(now.getTime() + now.getTimezoneOffset() * 6e4);
 
+        // JSON-формат для structured logging
+        if (this.getConfig().json_format) {
+            const entries = message.map(text => JSON.stringify({
+                level: level.toUpperCase(),
+                timestamp: now.toISOString(),
+                message: text,
+            }));
+            stream.write(entries.join('\n') + '\n');
+            return true;
+        }
+
+        // Стандартный текстовый формат
+        message[message.length-1] += '\n';
         const print = message.map(text =>
             this.getConfig().format.log
                 .replace('%level%', level.toUpperCase())
 
-                .replace('%HH%', now.getHours().toStringWithZeros())
+                .replace('%HH%', String(now.getHours()).padStart(2, '0'))
                 .replace('%H%', now.getHours())
-                .replace('%MM%', now.getMinutes().toStringWithZeros())
+                .replace('%MM%', String(now.getMinutes()).padStart(2, '0'))
                 .replace('%M%', now.getMinutes())
-                .replace('%SS%', now.getSeconds().toStringWithZeros())
+                .replace('%SS%', String(now.getSeconds()).padStart(2, '0'))
                 .replace('%S%', now.getSeconds())
 
                 .replace('%text%', text)
         );
-        fs.writeFileSync(checked.path_to_file, print.join('\n'), { flag: 'a' });
+        stream.write(print.join('\n'));
 
         return true;
     }
@@ -105,19 +182,25 @@ class Logger extends Module {
     error(message) { return this.log('error', message) }
 
     /**
-     * 
-     * @param {String} file_name Имя фала
+     *
+     * @param {String} file_name Имя файла
      * @description Возвращает записи из выбранного файла
-     * @returns {false|String}
+     * @returns {Promise<false|String>}
      */
-    get(file_name) {
+    async get(file_name) {
         const extension = this.getConfig().format.file_extension;
         const splited = file_name.split('.');
         if (splited[splited.length - 1] !== extension) file_name += `.${extension}`;
 
-        const checked = this.checkFile(false, file_name);
-        
-        return checked.exists ? fs.readFileSync(checked.path_to_file).toString() : false;
+        const directory = path.join(this.getDirname(), this.getConfig().directory);
+        const path_to_file = path.join(directory, file_name);
+
+        try {
+            const content = await fsp.readFile(path_to_file, 'utf-8');
+            return content;
+        } catch (e) {
+            return false;
+        }
     }
 }
 

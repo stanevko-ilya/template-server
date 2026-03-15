@@ -1,5 +1,6 @@
 const Module = require('../../_class');
 const API = require('../index');
+const jwt = require('jsonwebtoken');
 
 const modules = require('../../../modules');
 const { default: mongoose } = require('mongoose');
@@ -34,10 +35,12 @@ class Method extends Module {
         { code: -1, message: 'Ошибка во время выполнения запроса' },
         { code: -2, message: 'Ошибка во время проверки параметров запроса' },
         { code: -3, message: 'Метод отключен' },
+        { code: -4, message: 'Необходима авторизация' },
+        { code: -5, message: 'Недостаточно прав' },
     ];
     getError(code) { return this.#errors.find(error => error.code === code) }
     regError(code, message) {
-        if (this.getError()) throw new Error('Код ошибки уже занят в данном методе');
+        if (this.getError(code)) throw new Error('Код ошибки уже занят в данном методе');
         this.#errors.push({ code, message });
     }
 
@@ -148,7 +151,26 @@ class Method extends Module {
             if (!done) return this.sendResponse(res, this.getError(-3), 500);
 
             if ('auth' in config) {
-                // Проверка авторизации пользователя
+                const authHeader = req.headers.authorization;
+                if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                    return this.sendResponse(res, this.getError(-4), 401);
+                }
+
+                const token = authHeader.slice(7);
+                try {
+                    const secret = process.env.JWT_SECRET || 'default-secret';
+                    req.user = jwt.verify(token, secret);
+
+                    // Проверка ролей
+                    if (config.auth.roles && config.auth.roles.length > 0) {
+                        const userRole = req.user.role || '';
+                        if (!config.auth.roles.includes(userRole)) {
+                            return this.sendResponse(res, this.getError(-5), 403);
+                        }
+                    }
+                } catch (_e) {
+                    return this.sendResponse(res, this.getError(-4), 401);
+                }
             }
 
             if (config.have_params) done = this.checkParams(req.container_data);
