@@ -1,4 +1,4 @@
-# template-server v2
+# template-server v2.1
 
 Готовый шаблон production-ready сервера на Node.js с модульной архитектурой. Включает логирование, работу с MongoDB, REST API (Express 5), WebSocket-сервер (Socket.IO), SSL/TLS, JWT-авторизацию и Docker-поддержку.
 
