@@ -52,6 +52,12 @@ class Method extends Module {
      */
     async getResponse(req, res) { return true }
 
+    /**
+     * Возвращает конфигурацию теста для данного метода, или null если тест не определён.
+     * @returns {{ request: { params?: Object, headers?: Object }, expect: { status: number, body: *|Function } } | null}
+     */
+    getTest() { return null }
+
     checkParams(data) {
         const config = this.getConfig();
         

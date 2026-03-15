@@ -14,6 +14,16 @@ class Health extends Method {
         };
     }
 
+    getTest() {
+        return {
+            request: {},
+            expect: {
+                status: 200,
+                body: (response) => response.status === 'ok'
+            }
+        };
+    }
+
     constructor(url, express) { super(__dirname, url, express) }
 }
 

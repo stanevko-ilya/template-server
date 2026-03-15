@@ -45,8 +45,14 @@ npm run lint:fix
 # Форматирование
 npm run format
 
-# Тесты
+# Тесты (все)
 npm test
+
+# Интеграционные тесты модулей
+npx vitest run tests/integration/modules.test.js
+
+# Интеграционные тесты API
+npx vitest run tests/integration/api.test.js
 ```
 
 ### Docker
@@ -93,6 +99,68 @@ pm2 start ecosystem.config.js
 | `date.js` | `toShortDate`, `toUTCZone`, `isValid`, `toTimeDate` |
 | `number.js` | `toStringWithZeros` |
 | `object.js` | `isObject`, `cloneObject`, `deepCopy` |
+
+## Тестирование
+
+Используется [Vitest](https://vitest.dev/). Тесты расположены в `tests/`.
+
+### Структура тестов
+
+```
+tests/
+├── integration/
+│   ├── modules.test.js   # Lifecycle модулей (start/stop)
+│   └── api.test.js        # Автотесты всех API-методов
+└── unit/                  # Юнит-тесты утилит
+```
+
+### Интеграционные тесты модулей (`modules.test.js`)
+
+Проверяют корректность запуска и остановки всех модулей (logger, ssl, api, sockets). Каждый модуль должен получить статус `on` после `start()` и `off` после `stop()`.
+
+### Интеграционные тесты API (`api.test.js`)
+
+Автоматический тестовый раннер, который:
+1. Находит все API-методы через `directorySearch`
+2. Вызывает `getTest()` у каждого метода
+3. Для методов с не-`null` результатом создаёт тестовый кейс
+4. Выполняет реальные HTTP-запросы к запущенному серверу
+
+### Добавление теста для нового API-метода
+
+Реализуйте метод `getTest()` в классе вашего метода. Тестовый раннер подхватит его автоматически.
+
+```js
+class MyMethod extends Method {
+    getResponse(req) { /* ... */ }
+
+    getTest() {
+        return {
+            request: {
+                params: { key: 'value' },    // query для GET, body для POST
+                headers: {}                   // опционально
+            },
+            expect: {
+                status: 200,
+                body: { result: 'expected' }  // объект (deepEqual) или функция (динамическая проверка)
+            }
+        };
+    }
+
+    constructor(url, express) { super(__dirname, url, express) }
+}
+```
+
+Поле `expect.body` может быть функцией для динамической валидации:
+
+```js
+expect: {
+    status: 200,
+    body: (response) => response.status === 'ok'
+}
+```
+
+Для методов с JWT-авторизацией (`auth` в `config.json`) тестовый раннер автоматически добавляет Bearer-токен.
 
 ## Безопасность
 
