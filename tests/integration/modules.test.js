@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 // Устанавливаем env до загрузки модулей
-process.env.SSL_MODE = 'off';
 process.env.API_PORT = '18080';
 process.env.SOCKETS_PORT = '18081';
+process.env.HEALTH_PORT = '18090';
 if (!process.env.DB_URL) process.env.DB_URL = 'mongodb://localhost:27017/testdb';
 
 const modules = require('../../modules');
@@ -52,11 +52,10 @@ describe('Интеграционный тест модулей', () => {
         expect(modules.db.getStatus()).toBe('on');
     });
 
-    it('SSL запускается в режиме off и имеет статус on', async () => {
-        await modules.ssl.start();
-        startedModules.push('ssl');
-        expect(modules.ssl.getStatus()).toBe('on');
-        expect(modules.ssl.getCredentials()).toBeNull();
+    it('Cache запускается и имеет статус on (degraded без Redis допустим)', async () => {
+        await modules.cache.start();
+        startedModules.push('cache');
+        expect(modules.cache.getStatus()).toBe('on');
     });
 
     it('API запускается и имеет статус on', async () => {
@@ -71,12 +70,24 @@ describe('Интеграционный тест модулей', () => {
         expect(modules.sockets.getStatus()).toBe('on');
     });
 
+    it('Notifier запускается и имеет статус on', async () => {
+        await modules.notifier.start();
+        startedModules.push('notifier');
+        expect(modules.notifier.getStatus()).toBe('on');
+    });
+
+    it('Health запускается и имеет статус on', async () => {
+        await modules.health.start();
+        startedModules.push('health');
+        expect(modules.health.getStatus()).toBe('on');
+    });
+
     it('Модули останавливаются корректно', async () => {
         for (const name of [...startedModules].reverse()) {
             await modules[name].stop();
         }
 
-        const expectedOff = ['logger', 'ssl', 'api', 'sockets'];
+        const expectedOff = ['logger', 'cache', 'api', 'sockets', 'notifier', 'health'];
         if (mongoAvailable) expectedOff.push('db');
 
         for (const name of expectedOff) {

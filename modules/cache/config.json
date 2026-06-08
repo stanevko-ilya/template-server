@@ -1,0 +1,8 @@
+{
+    "masterName": "${REDIS_MASTER_NAME}",
+    "password": "${REDIS_PASSWORD}",
+    "username": "${REDIS_USERNAME}",
+    "sentinelsJson": "${REDIS_SENTINELS_JSON}",
+    "directHost": "${REDIS_HOST}",
+    "directPort": "${REDIS_PORT}"
+}

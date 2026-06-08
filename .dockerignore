@@ -2,7 +2,8 @@ node_modules
 .git
 .github
 modules/logger/logs
-modules/ssl/certs
+swagger.json
+docker/ssl
 tests
 .env
 .env.example

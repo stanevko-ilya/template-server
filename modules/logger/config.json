@@ -7,5 +7,10 @@
         "log": "[%level%][%HH%:%MM%:%SS%]%text%"
     },
     "json_format": false,
-    "save_logs": 180
+    "save_logs": 180,
+
+    "db_enabled": false,
+    "db_levels": ["warn", "error"],
+    "db_batch_size": 50,
+    "db_flush_interval_ms": 2000
 }

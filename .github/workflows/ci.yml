@@ -82,6 +82,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare env
+        run: cp .env.docker.example .env.docker
+
       - name: Build Docker image
         run: docker build -t template-server:test .
 
@@ -90,27 +93,28 @@ jobs:
 
       - name: Wait for services
         run: |
-          echo "Waiting for app to start..."
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:443/api/ping > /dev/null 2>&1; then
-              echo "App is ready"
+          echo "Waiting for stack to start (nginx :80 -> backend)..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost/api/ping > /dev/null 2>&1; then
+              echo "Stack is ready"
               exit 0
             fi
             sleep 2
           done
-          echo "App failed to start"
-          docker compose logs app
+          echo "Stack failed to start"
+          docker compose ps
+          docker compose logs backend nginx
           exit 1
 
       - name: Test /api/ping
         run: |
-          response=$(curl -sf http://localhost:443/api/ping)
+          response=$(curl -sf http://localhost/api/ping)
           echo "$response"
           echo "$response" | grep -q '"ok":true'
 
       - name: Test /api/health
         run: |
-          response=$(curl -sf http://localhost:443/api/health)
+          response=$(curl -sf http://localhost/api/health)
           echo "$response"
           echo "$response" | grep -q '"status":"ok"'
           echo "$response" | grep -q '"db":"on"'

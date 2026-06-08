@@ -17,9 +17,9 @@ REST API сервер на Express 5 с встроенными middleware без
 
 > Параметры `cors` и `rateLimit` отсутствуют в конфиге по умолчанию. При необходимости добавьте их в `config.json` — без них используются стандартные значения.
 
-## SSL
+## TLS
 
-SSL-сертификаты управляются модулем [SSL](../ssl/). Если SSL-модуль предоставляет credentials, сервер запускается по HTTPS, иначе — по HTTP.
+Приложение слушает plain HTTP. TLS терминируется внешним nginx (+ Let's Encrypt) — см. [docker/README.md](../../docker/README.md).
 
 ## Middleware
 
@@ -150,4 +150,4 @@ return { error_code: 1, status: 404 };
 ## Встроенные методы
 
 - **ping** (`GET /api/ping`) — возвращает `{ ok: true }`
-- **health** (`GET /api/health`) — возвращает статусы всех модулей: `{ status: 'ok', logger: 'on', db: 'on', ssl: 'off', api: 'on', sockets: 'on' }`
+- **health** (`GET /api/health`) — возвращает статусы всех модулей: `{ status: 'ok', logger: 'on', db: 'on', cache: 'on', api: 'on', sockets: 'on' }`

@@ -1,6 +1,8 @@
 {
     "port": "${SOCKETS_PORT}",
 
+    "cors": { "origin": "*" },
+
     "paths": {
         "events": "./events"
     }

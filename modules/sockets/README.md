@@ -9,9 +9,9 @@ WebSocket-сервер на Socket.IO. Модуль наследуется от 
 | `port` | `string` | Порт сервера. Поддерживает интерполяцию: `${SOCKETS_PORT}` |
 | `paths.events` | `string` | Директория с обработчиками событий |
 
-## SSL
+## TLS
 
-SSL-сертификаты управляются модулем [SSL](../ssl/). Если SSL-модуль предоставляет credentials, сервер запускается по HTTPS, иначе — по HTTP.
+Сервер слушает plain HTTP. TLS терминируется внешним nginx (+ Let's Encrypt) — см. [docker/README.md](../../docker/README.md).
 
 ## Создание событий
 

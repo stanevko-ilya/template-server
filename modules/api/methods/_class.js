@@ -1,8 +1,13 @@
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const { default: mongoose } = require('mongoose');
+
 const Module = require('../../_class');
 const API = require('../index');
-const jwt = require('jsonwebtoken');
-
-const { default: mongoose } = require('mongoose');
+const apiConfig = require('../config.json');
+const getUserRateLimit = require('../middleware/userRateLimit');
+const { getJwtSecret, warnNoJwtSecretOnce } = require('../../../functions/jwtSecret');
+const modules = require('../../../modules');
 
 class Method extends Module {
     loadConfig(config_path) {
@@ -44,7 +49,6 @@ class Method extends Module {
     }
 
     /**
-     * 
      * @param {Object} req Запрос пользователя
      * @param {Object} res Ответ пользователю
      * @returns {*} Ответ вызова метода
@@ -59,7 +63,7 @@ class Method extends Module {
 
     checkParams(data) {
         const config = this.getConfig();
-        
+
         // Проверка наличия обязательных параметров
         for (let i = 0; i < config.required_params.length; i++) {
             const key = config.required_params[i];
@@ -72,7 +76,7 @@ class Method extends Module {
              * @type {{
              *  name: String,
              *  required: Boolean,
-             *  type: 'string'|'number'|'object'|'boolean'|'objectId',
+             *  type: 'string'|'number'|'object'|'boolean'|'objectId'|'array',
              *  orientation: 'positive'|'negative',
              *  interval: [Number, Number],
              *  valid_values: Array<*>
@@ -90,32 +94,38 @@ class Method extends Module {
                 switch (param_config.type) {
                     case 'number':
                         value = +value;
-                        
+
                         if (
                             'orientation' in param_config
                             &&
                             (param_config.orientation === 'positive' && value < 0 || param_config.orientation === 'negative' && value > 0)
                         ) value *= -1;
-    
+
                         if ('interval' in param_config && (param_config.interval[0] >= value || param_config.interval[1] <= value)) return key;
-                    break;
-    
+                        break;
+
                     case 'boolean':
                         value = Boolean(Number.parseInt(value));
-                    break;
-    
+                        break;
+
                     case 'object':
                         value = JSON.parse(value);
-                    break;
+                        break;
 
                     case 'objectId':
                         value = new mongoose.Types.ObjectId(value);
-                    break;
+                        break;
+
+                    case 'array':
+                        if (typeof value === 'string') value = JSON.parse(value);
+                        if (!Array.isArray(value)) return key;
+                        break;
                 }
             } catch (_e) { return key }
 
-            
-            if ('valid_values' in param_config && param_config.valid_values.indexOf(value) === -1) return key; 
+            if ('valid_values' in param_config && param_config.valid_values.indexOf(value) === -1) return key;
+
+            data[key] = value;
         }
 
         return true;
@@ -130,6 +140,7 @@ class Method extends Module {
 
         const method_config = this.getConfig();
         if (method_config) {
+            if (method_config.auth) warnNoJwtSecretOnce(modules.logger);
             if ('errors' in method_config && method_config.errors instanceof Array) {
                 for (let i = 0; i < method_config.errors.length; i++) {
                     const error = method_config.errors[i];
@@ -144,18 +155,34 @@ class Method extends Module {
     createNode() {
         if (!this.getConfig()) return false;
 
-        this.#express[this.getConfig().method](this.getUrl(), async (req, res) => {
-            const config = this.getConfig();
+        const config = this.getConfig();
+        const middlewares = [];
 
+        // Per-route body-парсер: лимит из config.bodyLimit метода, иначе глобальный apiConfig.bodyLimit,
+        // иначе 512kb. В TEST_MODE всегда 50mb (нагрузочные тесты). + NoSQL-санитайз тела.
+        if (config.method !== 'get') {
+            const bodyLimit = process.env.TEST_MODE === 'true'
+                ? '50mb'
+                : (config.bodyLimit || apiConfig.bodyLimit || '512kb');
+            middlewares.push(express.json({ limit: bodyLimit }));
+            middlewares.push(express.urlencoded({ extended: false, limit: bodyLimit }));
+            middlewares.push((req, _res, next) => { if (req.body) req.body = API.sanitize(req.body); next(); });
+        }
+
+        // Per-user rate limit для авторизованных эндпоинтов
+        if (config.auth) {
+            middlewares.push(getUserRateLimit(apiConfig.userRateLimit));
+        }
+
+        this.getExpress()[config.method](this.getUrl(), ...middlewares, async (req, res) => {
             req.container_data = req[req.method === 'GET' ? 'query' : 'body'];
             if (!req.container_data) req.container_data = {};
-            // modules.logger.log('info', `Выполнение запроса ${this.getUrl()}`);
 
             let response;
             let done = config.use;
-            if (!done) return this.sendResponse(res, this.getError(-3), 500);
+            if (!done) return this.sendResponse(res, this.getError(-3), 503);
 
-            if ('auth' in config) {
+            if (config.auth) {
                 const authHeader = req.headers.authorization;
                 if (!authHeader || !authHeader.startsWith('Bearer ')) {
                     return this.sendResponse(res, this.getError(-4), 401);
@@ -163,8 +190,7 @@ class Method extends Module {
 
                 const token = authHeader.slice(7);
                 try {
-                    const secret = process.env.JWT_SECRET || 'default-secret';
-                    req.user = jwt.verify(token, secret);
+                    req.user = jwt.verify(token, getJwtSecret());
 
                     // Проверка ролей
                     if (config.auth.roles && config.auth.roles.length > 0) {
@@ -180,12 +206,17 @@ class Method extends Module {
 
             if (config.have_params) done = this.checkParams(req.container_data);
             if (done !== true) return this.sendResponse(res, { ...this.getError(-2), param_name: done }, 400);
-            
+
             try { response = await this.getResponse(req, res) }
-            catch (_e) { done = false }
+            catch (e) {
+                done = false;
+                modules.logger?.error(`Ошибка в методе ${this.getUrl()}: ${e.message}`, null, { requestId: req.requestId });
+                modules.logger?.error(e.stack || '', null, { requestId: req.requestId });
+            }
 
             if (!done) return this.sendResponse(res, this.getError(-1), 500);
-            
+            if (res.headersSent) return;
+
             if (response instanceof Object && 'error_code' in response) return this.sendResponse(res, this.getError(response.error_code), 'status' in response ? response.status : 200);
             this.sendResponse(res, response);
         });

@@ -7,5 +7,15 @@
         "static": "./public"
     },
 
-    "headers": []
+    "headers": [],
+
+    "bodyLimit": "512kb",
+    "rateLimit": {
+        "windowMs": 1000,
+        "max": 100
+    },
+    "userRateLimit": {
+        "windowMs": 1000,
+        "max": 40
+    }
 }
