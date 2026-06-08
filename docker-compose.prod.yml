@@ -1,0 +1,40 @@
+# Продакшен-оверлей: TLS через nginx + Let's Encrypt (certbot, авто-обновление).
+# Запуск:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Перед первым запуском см. docker/README.md (bootstrap сертификата).
+#
+# Переменные окружения (например в .env рядом с compose):
+#   LE_DOMAIN, LE_EMAIL, LE_STAGING (0|1)
+
+services:
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${LE_DOMAIN}
+    volumes:
+      # Шаблон рендерится nginx-образом (envsubst подставляет ${DOMAIN})
+      - ./docker/nginx.prod.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - certbot-certs:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
+    # Перезагружаем nginx раз в 6ч, чтобы подхватывать обновлённые сертификаты
+    command: ["sh", "-c", "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"]
+
+  certbot:
+    image: certbot/certbot
+    env_file: [.env.docker]
+    environment:
+      - LE_DOMAIN=${LE_DOMAIN}
+      - LE_EMAIL=${LE_EMAIL}
+      - LE_STAGING=${LE_STAGING}
+    volumes:
+      - certbot-certs:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+      - ./docker/certbot-entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["sh", "/entrypoint.sh"]
+    networks: [app-network]
+    restart: unless-stopped
+
+volumes:
+  certbot-certs:
+  certbot-webroot:

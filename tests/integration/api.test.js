@@ -3,7 +3,6 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 
 // Устанавливаем env до загрузки модулей
-process.env.SSL_MODE = 'off';
 process.env.API_PORT = '18082';
 process.env.SOCKETS_PORT = '18083';
 
@@ -110,7 +109,7 @@ function collectMethodTests() {
                 testConfig,
             });
         }
-    }, 'index.js');
+    }, 'index.js', true);
 
     return tests;
 }
@@ -118,13 +117,11 @@ function collectMethodTests() {
 describe('Тестирование API методов', () => {
     beforeAll(async () => {
         await modules.logger.start();
-        await modules.ssl.start();
         await modules.api.start();
     });
 
     afterAll(async () => {
         await modules.api.stop();
-        await modules.ssl.stop();
         await modules.logger.stop();
     });
 

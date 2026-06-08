@@ -1,4 +1,15 @@
 {
     "url": "${DB_URL}",
-    "directory": "./models"
+    "dbName": "${MONGO_DB_NAME}",
+    "user": "${MONGO_USER}",
+    "password": "${MONGO_PASSWORD}",
+    "replicaSet": "${MONGO_REPLICA_SET}",
+
+    "directory": "./models",
+
+    "maxPoolSize": 20,
+    "minPoolSize": 5,
+    "socketTimeoutMS": 30000,
+    "serverSelectionTimeoutMS": 5000,
+    "maxIdleTimeMS": 60000
 }

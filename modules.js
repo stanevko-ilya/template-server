@@ -8,14 +8,20 @@ module.exports = {
     /** @type {import('./modules/db')} */
     db: null,
 
-    /** @type {import('./modules/ssl')} */
-    ssl: null,
+    /** @type {import('./modules/cache')} */
+    cache: null,
 
     /** @type {import('./modules/api')} */
     api: null,
 
     /** @type {import('./modules/sockets')} */
-    sockets: null
+    sockets: null,
+
+    /** @type {import('./modules/notifier')} */
+    notifier: null,
+
+    /** @type {import('./modules/health')} */
+    health: null
 };
 
 directorySearch(

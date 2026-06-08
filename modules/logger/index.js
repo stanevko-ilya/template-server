@@ -3,20 +3,48 @@ const fsp = require('fs/promises');
 const path = require('path');
 const Module = require('../_class');
 
+/**
+ * @description Логгер с двумя стоками:
+ *   1. Файловый (по умолчанию, без зависимостей) — ротация по дате, чистка по возрасту.
+ *   2. MongoDB (опционально, флаг config.db_enabled) — буферизованная пакетная запись,
+ *      запросные логи + TTL (см. modules/db/models/log.js).
+ * Консоль используется всегда для системных логов; HTTP-логи (extra.requestId) в консоль не дублируются.
+ */
 class Logger extends Module {
+    /** @returns {typeof import('./config.json')} */
+    getConfig() { return super.getConfig(); }
+
     #logging = false;
 
     /** @type {fs.WriteStream|null} */
     #stream = null;
     #streamDate = null;
 
+    // --- Mongo-сток ---
+    #dbEnabled = false;
+    /** @type {import('mongoose').Model|null} */
+    #logModel = null;
+    #dbReady = false;
+    #buffer = [];
+    #flushTimer = null;
+    #maxBufferSize = 10000;
+
     startFunction() {
         this.#logging = true;
+        this.#dbEnabled = this.getConfig().db_enabled === true;
         this.#cleanOldLogs();
     }
 
     async stopFunction() {
         this.#logging = false;
+
+        // Сброс оставшихся логов в БД
+        this.#flush();
+        if (this.#flushTimer) {
+            clearInterval(this.#flushTimer);
+            this.#flushTimer = null;
+        }
+
         if (this.#stream) {
             await new Promise(resolve => this.#stream.end(resolve));
             this.#stream = null;
@@ -121,27 +149,59 @@ class Logger extends Module {
         } catch (_e) { /* directory might not exist */ }
     }
 
-    /**
-     *
-     * @param {'info'|'warn'|'error'} level Любой уровень сообщения
-     * @param {String|Array<String>} message Сообщение или список сообщений
-     * @description Добавляет запись в файл
-     */
-    log(level, message) {
-        if (!this.#logging) return false;
+    // ── Mongo-сток ──────────────────────────────────────────────
 
+    /** @description Нужно ли писать лог в БД */
+    #shouldWriteToDb(level, extra) {
+        if (extra?.toDB) return true;
+        const dbLevels = this.getConfig()?.db_levels || ['warn', 'error'];
+        return dbLevels.includes(level);
+    }
+
+    /** @description Сбрасывает буфер логов в БД пакетом */
+    #flush() {
+        if (!this.#dbReady || !this.#logModel || this.#buffer.length === 0) return;
+
+        const batch = this.#buffer.splice(0);
+        this.#logModel.insertMany(batch, { ordered: false }).catch(e => {
+            process.stderr.write(`[LOGGER] Ошибка записи логов в БД: ${e.message}\n`);
+        });
+    }
+
+    /**
+     * @description Подключает логгер к модели БД и запускает периодический сброс буфера.
+     * Вызывается из entry-point после старта БД (только при db_enabled).
+     * @param {import('mongoose').Model} logModel
+     */
+    connectToDb(logModel) {
+        this.#logModel = logModel;
+        this.#dbReady = true;
+
+        const flushInterval = this.getConfig()?.db_flush_interval_ms || 2000;
+        this.#flushTimer = setInterval(() => this.#flush(), flushInterval);
+        this.#flushTimer.unref();
+
+        this.#flush();
+    }
+
+    // ── Файловый сток ───────────────────────────────────────────
+
+    /**
+     * @description Пишет запись в файл (и в консоль, если не HTTP-лог)
+     * @param {String} level
+     * @param {Array<String>} message
+     * @param {Boolean} silentConsole — не дублировать в консоль (для HTTP-трафика)
+     */
+    #writeToFile(level, message, silentConsole = false) {
         const stream = this.#getStream();
         if (!stream) return false;
-
-        if (typeof(message) === 'string') message = [ message ];
 
         const now = new Date();
         if (this.getConfig().UTC) now.setTime(now.getTime() + now.getTimezoneOffset() * 6e4);
 
-        // Выбор потока console по уровню
         const consoleFn = level === 'error' ? console.error
             : level === 'warn' ? console.warn
-            : console.log;
+                : console.log;
 
         // JSON-формат для structured logging
         if (this.getConfig().json_format) {
@@ -152,12 +212,12 @@ class Logger extends Module {
             }));
             const output = entries.join('\n') + '\n';
             stream.write(output);
-            consoleFn(output.trimEnd());
+            if (!silentConsole) consoleFn(output.trimEnd());
             return true;
         }
 
         // Стандартный текстовый формат
-        message[message.length-1] += '\n';
+        message[message.length - 1] += '\n';
         const print = message.map(text =>
             this.getConfig().format.log
                 .replace('%level%', level.toUpperCase())
@@ -173,31 +233,63 @@ class Logger extends Module {
         );
         const output = print.join('\n');
         stream.write(output);
-        consoleFn(output.trimEnd());
+        if (!silentConsole) consoleFn(output.trimEnd());
 
         return true;
     }
 
     /**
+     * @param {'info'|'warn'|'error'} level Уровень сообщения
      * @param {String|Array<String>} message Сообщение или список сообщений
-     * @description Добавляет запись в файл с меткой INFO
+     * @param {*} [user_id] ID пользователя (попадает в Mongo-сток)
+     * @param {Object} [extra] Доп. поля: { requestId, module, toDB, http_method, url, status_code, ... }
+     * @description Пишет запись в файл/консоль и (опционально) в БД
      */
-    info(message) { return this.log('info', message) }
-    /**
-     * @param {String|Array<String>} message Сообщение или список сообщений
-     * @description Добавляет запись в файл с меткой WARN
-     */
-    warn(message) { return this.log('warn', message) }
-    /**
-     * @param {String|Array<String>} message Сообщение или список сообщений
-     * @description Добавляет запись в файл с меткой ERROR
-     */
-    error(message) { return this.log('error', message) }
+    log(level, message, user_id = null, extra = {}) {
+        const messages = typeof message === 'string'
+            ? [message]
+            : (Array.isArray(message) ? message : [String(message)]);
+
+        // --- Файловый + консольный сток (по умолчанию) ---
+        if (this.#logging) this.#writeToFile(level, messages.slice(), !!extra.requestId);
+
+        // --- Mongo-сток (опционально) ---
+        if (this.#dbEnabled && this.#shouldWriteToDb(level, extra)) {
+            const doc = {
+                level,
+                message: messages.join(' '),
+                timestamp: new Date(),
+                user_id: user_id ?? null,
+                requestId: extra.requestId || null,
+                module: extra.module || null,
+                http_method: extra.http_method || null,
+                url: extra.url || null,
+                status_code: extra.status_code || null,
+                duration_ms: extra.duration_ms || null,
+                request_body: extra.request_body || null,
+                request_query: extra.request_query || null,
+                request_headers: extra.request_headers || null,
+                response_body: extra.response_body || null,
+            };
+
+            this.#buffer.push(doc);
+            if (this.#dbReady) {
+                if (this.#buffer.length >= (this.getConfig().db_batch_size || 50)) this.#flush();
+            } else if (this.#buffer.length > this.#maxBufferSize) {
+                this.#buffer.shift(); // FIFO-кап до подключения БД
+            }
+        }
+
+        return true;
+    }
+
+    info(message, user_id = null, extra = {}) { return this.log('info', message, user_id, extra) }
+    warn(message, user_id = null, extra = {}) { return this.log('warn', message, user_id, extra) }
+    error(message, user_id = null, extra = {}) { return this.log('error', message, user_id, extra) }
 
     /**
-     *
      * @param {String} file_name Имя файла
-     * @description Возвращает записи из выбранного файла
+     * @description Возвращает записи из выбранного файла логов
      * @returns {Promise<false|String>}
      */
     async get(file_name) {

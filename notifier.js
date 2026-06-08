@@ -1,24 +1,22 @@
 require('dotenv').config();
 
-const fs = require('fs');
-const path = require('path');
 const delay = require('./functions/asyncDelay');
 const modules = require('./modules');
 
 /**
- * @description Приоритетная очередь запуска
- * @default ['logger','db','cache']
+ * @description Entry point процесса фоновых задач.
+ * Запускает только: logger → db → cache → notifier (+ health).
+ * Модули api и sockets в этом процессе не загружаются.
  */
+
+const EXCLUDED_MODULES = ['api', 'sockets'];
 const priority_launch_queue = ['logger', 'db', 'cache'];
-// notifier и health запускаются отдельным процессом (notifier.js) — исключаем из API-инстанса
-const EXCLUDED_MODULES = ['notifier', 'health'];
 
 const launch_queue = Object.keys(modules)
     .filter(name => !EXCLUDED_MODULES.includes(name))
     .sort((module1, module2) => {
         const index_module1 = priority_launch_queue.indexOf(module1);
         const index_module2 = priority_launch_queue.indexOf(module2);
-
         if (index_module1 !== -1 && index_module2 !== -1) return index_module1 - index_module2;
         return index_module1 !== -1 ? -1 : 1;
     });
@@ -49,11 +47,11 @@ async function launch(index) {
         return;
     }
 
-    modules.logger?.info('Запуск модуля ' + module);
+    modules.logger?.info('[notifier] Запуск модуля ' + module);
 
     let error = false;
-    try { await modules[module].start() }
-    catch (e) { error = e.message }
+    try { await modules[module].start(); }
+    catch (e) { error = e.message; }
 
     if (error) {
         modules.logger?.error(error);
@@ -69,47 +67,23 @@ async function launch(index) {
         }
 
         const status = modules[module].getStatus();
-
         switch (status) {
-            case 'off':
-                modules.logger?.warn(`Модуль ${module} не запущен`);
-            break;
-
-            case 'on':
-                modules.logger?.info(`Модуль ${module} запущен`);
-            break;
-
-            default:
-                await delay(1000);
-                await check_status(number+1);
+            case 'off': modules.logger?.warn(`Модуль ${module} не запущен`); break;
+            case 'on': modules.logger?.info(`Модуль ${module} запущен`); break;
+            default: await delay(1000); await check_status(number + 1);
         }
     }
-
     await check_status(0);
 
-    // После запуска БД — подключить Mongo-сток логгера (если включён)
     if (module === 'db') connectLoggerDb();
 
     const next_index = index + 1;
     if (next_index < launch_queue.length) await launch(next_index);
 }
 
-// Преобразование параметров запуска
-const args = process.argv.slice(2);
-process.argvParsed = {};
-for (let i = 0; i < args.length; i += 2) {
-    const key = args[i];
-    const value = args[i + 1] || true;
-    process.argvParsed[key.replace(/^--/, '')] = value;
-}
-
-// Подключение глобального конфига (при наличии)
-if (fs.existsSync(path.join(__dirname, './config.json')))
-    process.globalConfig = require('./config.json');
-
 // Graceful shutdown
 async function shutdown(signal) {
-    modules.logger?.info(`Получен сигнал ${signal}, завершение работы...`);
+    modules.logger?.info(`[notifier] Получен сигнал ${signal}, завершение работы...`);
 
     const reversed = [...launch_queue].reverse();
     for (const name of reversed) {
@@ -141,13 +115,13 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
 }
 
 process.on('uncaughtException', (err) => {
-    modules.logger?.error(`Необработанное исключение: ${err.message}`);
+    modules.logger?.error(`[notifier] Необработанное исключение: ${err.message}`);
     modules.logger?.error(err.stack || '');
     process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
-    modules.logger?.error(`Необработанный промис: ${reason}`);
+    modules.logger?.error(`[notifier] Необработанный промис: ${reason}`);
     process.exit(1);
 });
 
