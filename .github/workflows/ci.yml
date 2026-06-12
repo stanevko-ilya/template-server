@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, development]
+    branches: [main, development, typescript-version]
   pull_request:
     branches: [main, development]
   workflow_dispatch:
@@ -17,11 +17,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: yarn
 
-      - run: npm ci
+      - run: yarn install --frozen-lockfile
 
-      - run: npm run lint
+      - run: yarn lint
+
+  build:
+    name: Build (typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn build
 
   test-ubuntu:
     name: Test (Ubuntu)
@@ -44,12 +59,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: yarn
 
-      - run: npm ci
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn build
 
       - name: Run all tests
-        run: npm test
+        run: yarn test
         env:
           DB_URL: mongodb://localhost:27017/testdb-test
 
@@ -62,17 +79,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: yarn
 
       - name: Install and start MongoDB
         uses: ankane/setup-mongodb@v1
         with:
           mongodb-version: '7.0'
 
-      - run: npm ci
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn build
 
       - name: Run all tests
-        run: npm test
+        run: yarn test
         env:
           DB_URL: mongodb://localhost:27017/testdb-test
 
@@ -86,7 +105,7 @@ jobs:
         run: cp .env.docker.example .env.docker
 
       - name: Build Docker image
-        run: docker build -t template-server:test .
+        run: docker build -f packages/backend/Dockerfile -t template-server:test .
 
       - name: Start services
         run: docker compose up -d

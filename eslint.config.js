@@ -1,39 +1,54 @@
 const js = require('@eslint/js');
+const tseslint = require('typescript-eslint');
 const globals = require('globals');
-const prettierConfig = require('eslint-config-prettier');
+const prettier = require('eslint-config-prettier');
 
-module.exports = [
-    js.configs.recommended,
-    prettierConfig,
+module.exports = tseslint.config(
     {
+        ignores: [
+            '**/dist/**',
+            '**/node_modules/**',
+            '**/logs/**',
+            '**/public/**',
+            '**/.nx/**',
+            '**/swagger.json',
+        ],
+    },
+    js.configs.recommended,
+    ...tseslint.configs.recommended,
+    {
+        files: ['**/*.ts'],
         languageOptions: {
             ecmaVersion: 2022,
-            sourceType: 'commonjs',
-            globals: {
-                ...globals.node,
-            },
+            sourceType: 'module',
+            globals: { ...globals.node },
         },
         rules: {
-            'no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+            '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/no-unused-vars': [
+                'warn',
+                { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+            ],
             'no-console': 'off',
         },
     },
     {
-        files: ['tests/**/*.js'],
+        // Скрипты сборки и конфиги на чистом JS/ESM
+        files: ['**/*.mjs', '**/*.cjs', '**/*.js'],
         languageOptions: {
-            globals: {
-                describe: 'readonly',
-                it: 'readonly',
-                expect: 'readonly',
-                beforeAll: 'readonly',
-                afterAll: 'readonly',
-                beforeEach: 'readonly',
-                afterEach: 'readonly',
-                vi: 'readonly',
-            },
+            ecmaVersion: 2022,
+            globals: { ...globals.node },
+        },
+        rules: {
+            'no-console': 'off',
         },
     },
     {
-        ignores: ['node_modules/', 'modules/logger/logs/', 'modules/api/public/'],
+        // Тестовые файлы (vitest globals доступны через явные импорты)
+        files: ['**/tests/**/*.ts'],
+        languageOptions: {
+            globals: { ...globals.node },
+        },
     },
-];
+    prettier,
+);

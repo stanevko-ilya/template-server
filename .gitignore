@@ -1,6 +1,9 @@
-/node_modules
-/modules/logger/logs/*.log
+node_modules
+dist
+.nx
+*.tsbuildinfo
 .env
 .env.docker
-docker/ssl
+**/logs/*.log
 swagger.json
+docker/ssl

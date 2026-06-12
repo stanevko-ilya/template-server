@@ -4,8 +4,10 @@
 
 services:
   backend:
-    build: .
-    command: ["node", "index.js"]
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    command: ["node", "dist/index.js"]
     env_file: [.env.docker]
     environment:
       - API_PORT=3000
@@ -30,8 +32,10 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
   notifier:
-    build: .
-    command: ["node", "notifier.js"]
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    command: ["node", "dist/notifier.js"]
     env_file: [.env.docker]
     environment:
       - HEALTH_PORT=3001
