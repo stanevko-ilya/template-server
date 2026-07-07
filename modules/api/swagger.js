@@ -1,6 +1,8 @@
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const directorySearch = require('../../functions/directorySearch');
+const { getJwtSecret } = require('../../functions/jwtSecret');
 const { schemas: responseSchemas } = require('./swagger-schemas');
 
 // ---- Стандартные ошибки (совпадают с modules/api/methods/_class.js) ----
@@ -265,18 +267,106 @@ function buildSpec() {
     };
 }
 
-// ---- Middleware авторизации для Swagger UI (по SERVICE_KEY) ----
-function swaggerAuthMiddleware(req, res, next) {
-    // Пропускаем статические ресурсы swagger-ui (CSS, JS, иконки)
-    if (req.path !== '/' && req.path !== '' && req.path !== '/index.html') return next();
+// Имя cookie-сессии Swagger UI (см. swaggerAuthMiddleware).
+const SWAGGER_COOKIE = 'swagger_session';
+// Срок жизни сессии Swagger UI (совпадает с maxAge cookie и проверяется на сервере).
+const SWAGGER_SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 часов
 
+/** Сравнение строк за константное время (защита от timing-атак на ключ/токен). */
+function safeEqual(a, b) {
+    const ab = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ab.length !== bb.length) return false;
+    return crypto.timingSafeEqual(ab, bb);
+}
+
+/**
+ * Подпись сессии — HMAC(secret, "swagger-ui:<serviceKey>:<exp>"). Секрет берём из
+ * getJwtSecret(): если JWT_SECRET не задан — это случайный секрет процесса, а НЕ сам ключ,
+ * поэтому по значению cookie нельзя офлайн-перебором восстановить SERVICE_KEY, и сам ключ
+ * в cookie не хранится. exp входит в подпись — срок нельзя подделать.
+ */
+function swaggerSessionSig(serviceKey, exp) {
+    return crypto.createHmac('sha256', getJwtSecret()).update(`swagger-ui:${serviceKey}:${exp}`).digest('hex');
+}
+
+/** Выпускает значение cookie-сессии вида "<exp>.<подпись>" со сроком SWAGGER_SESSION_TTL_MS. */
+function issueSwaggerSession(serviceKey) {
+    const exp = Date.now() + SWAGGER_SESSION_TTL_MS;
+    return `${exp}.${swaggerSessionSig(serviceKey, exp)}`;
+}
+
+/** Проверяет cookie-сессию: корректная подпись И не истёкший срок (проверка на сервере). */
+function isValidSwaggerSession(cookieValue, serviceKey) {
+    if (!cookieValue) return false;
+    const dot = cookieValue.indexOf('.');
+    if (dot <= 0) return false;
+    const exp = Number(cookieValue.slice(0, dot));
+    if (!Number.isFinite(exp) || exp <= Date.now()) return false;
+    return safeEqual(cookieValue.slice(dot + 1), swaggerSessionSig(serviceKey, exp));
+}
+
+/** Читает значение cookie из заголовка Cookie (без внешних зависимостей). */
+function readCookie(header, name) {
+    if (!header) return undefined;
+    for (const part of header.split(';')) {
+        const eq = part.indexOf('=');
+        if (eq === -1) continue;
+        if (part.slice(0, eq).trim() === name) return part.slice(eq + 1).trim();
+    }
+    return undefined;
+}
+
+/**
+ * Middleware авторизации для Swagger UI по SERVICE_KEY.
+ *
+ * Защищает ВСЕ ресурсы под /api/docs (в первую очередь swagger-ui-init.js, куда
+ * swagger-ui-express встраивает всю OpenAPI-спеку, и catch-all HTML). Раньше проверка
+ * стояла только для '/', '' и '/index.html', а остальные пути пропускались через next(),
+ * из-за чего спеку можно было получить без ключа (напр. GET /api/docs/swagger-ui-init.js).
+ *
+ * Ключ принимается из заголовка X-Service-Key, query (?key=) или cookie-сессии, которая
+ * выставляется после первой успешной проверки по query — чтобы статические ассеты
+ * swagger-ui (запрашиваются относительными URL без ?key=) проходили проверку. Cookie-сессия
+ * подписана (getJwtSecret) и имеет серверный срок; сам SERVICE_KEY в ней не хранится.
+ */
+function swaggerAuthMiddleware(req, res, next) {
     const serviceKey = process.env.SERVICE_KEY;
     if (!serviceKey) return res.status(403).json({ error: { code: -5, message: 'Служебный ключ не настроен (SERVICE_KEY)' } });
 
-    const provided = req.headers['x-service-key'] || req.query.key;
-    if (!provided || provided !== serviceKey) {
-        return res.status(403).send('Доступ запрещён. Используйте /api/docs?key=YOUR_SERVICE_KEY');
+    const headerKey = req.headers['x-service-key'];
+    const queryKey = typeof req.query.key === 'string' ? req.query.key : undefined;
+    const sessionCookie = readCookie(req.headers.cookie, SWAGGER_COOKIE);
+
+    const isKey = (v) => typeof v === 'string' && v.length > 0 && safeEqual(v, serviceKey);
+
+    if (!isKey(headerKey) && !isKey(queryKey) && !isValidSwaggerSession(sessionCookie, serviceKey)) {
+        return res
+            .status(403)
+            .send('Доступ запрещён. Используйте заголовок X-Service-Key или откройте /api/docs/?key=YOUR_SERVICE_KEY');
     }
+
+    // Успешный вход по query → ставим httpOnly cookie-сессию, чтобы последующие запросы
+    // к ассетам (без ?key= в URL) проходили проверку.
+    if (isKey(queryKey)) {
+        res.cookie(SWAGGER_COOKIE, issueSwaggerSession(serviceKey), {
+            httpOnly: true,
+            sameSite: 'strict',
+            secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+            path: req.baseUrl || '/api/docs',
+            maxAge: SWAGGER_SESSION_TTL_MS,
+        });
+    }
+
+    // Нормализуем корень без завершающего слэша (/api/docs → /api/docs/): иначе
+    // относительные ссылки на ассеты (./swagger-ui-init.js) резолвятся выше mount-пути.
+    // Query (в т.ч. ?key=) в целевой URL НЕ переносим — cookie уже выставлена на этом же
+    // ответе, поэтому SERVICE_KEY не попадает в Location/историю браузера/логи прокси.
+    const rawPath = req.originalUrl.split('?')[0];
+    if (req.path === '/' && !rawPath.endsWith('/')) {
+        return res.redirect((req.baseUrl || '/api/docs') + '/');
+    }
+
     next();
 }
 
@@ -310,3 +400,4 @@ function setupSwagger(app) {
 module.exports = setupSwagger;
 // Экспортируем для тестов: проверка, что отключённые методы не попадают в спеку.
 module.exports.buildSpec = buildSpec;
+module.exports.swaggerAuthMiddleware = swaggerAuthMiddleware;
